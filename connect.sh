@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VPN_HOME=~
+VPN_HOME=~/vpn
 cd $VPN_HOME
 
 # get variables from setup.sh
