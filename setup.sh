@@ -1,7 +1,10 @@
 #!/bin/bash
 
-VPN_HOME=~
+VPN_HOME=~/vpn
+mkdir -p $VPN_HOME
+cp connect.sh $VPN_HOME
 cd $VPN_HOME
+chmod a+x connect.sh
 
 echo VPN Router Setup
 echo ==============================
@@ -125,3 +128,7 @@ socks pass {
     from: 0/0 to: 0/0
 }
 EOF
+
+systemctl restart networking
+systemctl restart danted
+systemctl restart isc-dhcp-server
