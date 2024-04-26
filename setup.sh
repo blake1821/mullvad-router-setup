@@ -125,6 +125,24 @@ socks pass {
 }
 EOF
 
+# /etc/systemd/system/mullvad.service
+cat >/etc/systemd/system/mullvad.service <<EOF
+[Unit]
+Description=Connect to mullvad VPN
+
+[Service]
+Type=simple
+ExecStart=/root/vpn/connect.sh
+Restart=no
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable mullvad
+systemctl start mullvad
 systemctl restart networking
 systemctl restart danted
 systemctl restart isc-dhcp-server
