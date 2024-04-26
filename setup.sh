@@ -33,6 +33,7 @@ DNS6_SERVER=2606:4700:4700::1111
 # Write Variables
 echo $PRIVATE_KEY >privatekey
 echo $PUBLICK_KEY >publickey
+mkdir vars
 cd vars
 echo $LAN_IFNAME>lan
 echo $WAN_IFNAME>wan
@@ -67,7 +68,7 @@ EOF
 
 # /etc/dhcp
 # dhcpd.conf
-cat >/etc/dhcpd/dhcpd.conf <<EOF
+cat >/etc/dhcp/dhcpd.conf <<EOF
 option domain-name-servers $DNS_SERVER;
 
 default-lease-time 600;
@@ -83,7 +84,7 @@ subnet 192.168.0.0 netmask 255.255.255.0 {
 EOF
 
 # dhcpd6.conf
-cat >/etc/dhcpd/dhcpd6.conf <<EOF
+cat >/etc/dhcp/dhcpd6.conf <<EOF
 
 default-lease-time 2592000;
 preferred-lifetime 604800;
