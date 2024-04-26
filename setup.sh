@@ -110,7 +110,7 @@ user.unprivileged: nobody
 internal: 0.0.0.0 port=1080
 
 # The proxying network interface or address.
-external: $WG_IFNAME
+external: wg0
 
 # socks-rules determine what is proxied through the external interface.
 clientmethod: none
