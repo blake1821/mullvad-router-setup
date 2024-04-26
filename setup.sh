@@ -12,7 +12,7 @@ echo ==============================
 echo
 
 # Install packages
-apt install wireguard jq curl iptables isc-dhcp-server dante-server
+apt install wireguard jq curl iptables isc-dhcp-server dante-server dnsmasq
 
 # Prompt for information
 echo Here are the different interfaces: 
@@ -67,7 +67,7 @@ auto $LAN_IFNAME
 iface $LAN_IFNAME inet static
         address 192.168.0.1/24
 iface $LAN_IFNAME inet6 static
-        address 2001:db8::1/64
+        address 2001:cccc::1/64
 EOF
 
 # /etc/dhcp
@@ -93,8 +93,8 @@ cat >/etc/dhcp/dhcpd6.conf <<EOF
 default-lease-time 600;
 max-lease-time 7200;
 
-subnet6 2001:db8::/64 {
-    range6 2001:db8::2 2001:db8::fffe;
+subnet6 2001:cccc::/64 {
+    range6 2001:cccc::2 2001:cccc::fffe;
     option dhcp6.name-servers $DNS6_SERVER;
 }
 
