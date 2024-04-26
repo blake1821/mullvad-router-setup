@@ -108,7 +108,7 @@ user.privileged: root
 user.unprivileged: nobody
 
 # The listening network interface or address.
-internal: 0.0.0.0 port=1080
+internal: $MAN_IFNAME port=1080
 
 # The proxying network interface or address.
 external: wg0
@@ -118,10 +118,10 @@ clientmethod: none
 socksmethod: none
 
 client pass {
-    from: 0.0.0.0/0 to: 0.0.0.0/0
+    from: 0/0 to: 0/0
 }
 
 socks pass {
-    from: 0.0.0.0/0 to: 0.0.0.0/0
+    from: 0/0 to: 0/0
 }
 EOF
