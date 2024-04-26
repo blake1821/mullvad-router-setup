@@ -1,6 +1,7 @@
 #!/bin/bash
 
 VPN_HOME=~/vpn
+rm -rf $VPN_HOME
 mkdir -p $VPN_HOME
 cp connect.sh $VPN_HOME
 cd $VPN_HOME
