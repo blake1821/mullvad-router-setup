@@ -90,17 +90,12 @@ EOF
 # dhcpd6.conf
 cat >/etc/dhcp/dhcpd6.conf <<EOF
 
-default-lease-time 2592000;
-preferred-lifetime 604800;
-option dhcp-renewal-time 3600;
-option dhcp-rebinding-time 7200;
-allow leasequery;
-
-option dhcp6.name-servers $DNS6_SERVER;
+default-lease-time 600;
+max-lease-time 7200;
 
 subnet6 2001:db8::/64 {
-    range6 2001:db8::100 2001:db8::1:0;
-    interface $LAN_IFNAME;
+    range6 2001:db8::2 2001:db8::fffe;
+    option dhcp6.name-servers $DNS6_SERVER;
 }
 
 EOF
