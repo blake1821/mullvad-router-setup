@@ -142,7 +142,7 @@ EOF
 
 systemctl daemon-reload
 systemctl enable mullvad
-systemctl start mullvad
 systemctl restart networking
 systemctl restart danted
 systemctl restart isc-dhcp-server
+systemctl start mullvad
