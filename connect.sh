@@ -116,6 +116,11 @@ sysctl -w net.ipv6.conf.all.forwarding=1
     iptables -t nat -A POSTROUTING -o $WG_IFNAME -j MASQUERADE
     ip6tables -t nat -A POSTROUTING -o $WG_IFNAME -j MASQUERADE
 
+    # Forward SSH traffic from $MAN_IFNAME to 192.168.0.210
+    iptables -t nat -A PREROUTING -i $MAN_IFNAME -p tcp --dport 1022 -j DNAT --to-destination 192.168.0.210:22
+
+
+
 # Setup DNS
 cat >/etc/resolv.conf <<EOF
 nameserver $DNS_SERVER
