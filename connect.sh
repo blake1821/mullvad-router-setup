@@ -118,6 +118,10 @@ sysctl -w net.ipv6.conf.all.forwarding=1
 
     # Forward SSH traffic from $MAN_IFNAME to 192.168.0.210
     iptables -t nat -A PREROUTING -i $MAN_IFNAME -p tcp --dport 1022 -j DNAT --to-destination 192.168.0.210:22
+    iptables -A FORWARD -i $MAN_IFNAME -o $LAN_IFNAME -j ACCEPT
+    iptables -A FORWARD -i $LAN_IFNAME -o $MAN_IFNAME -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+    
 
 
 
