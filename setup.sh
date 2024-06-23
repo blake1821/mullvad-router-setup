@@ -3,9 +3,9 @@
 VPN_HOME=~/vpn
 rm -rf $VPN_HOME
 mkdir -p $VPN_HOME
-cp connect.sh $VPN_HOME
+cp * $VPN_HOME
 cd $VPN_HOME
-chmod a+x connect.sh
+chmod a+x *.sh *.py
 
 echo VPN Router Setup
 echo ==============================
@@ -140,9 +140,26 @@ After=network.target
 WantedBy=multi-user.target
 EOF
 
+# /etc/systemd/system/router-website.service
+cat >/etc/systemd/system/router-website.service <<EOF
+[Unit]
+Description=Mullvad Router Website
+
+[Service]
+Type=simple
+ExecStart=/root/vpn/webserver.py
+Restart=always
+After=network.target
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 systemctl daemon-reload
 systemctl enable mullvad
+systemctl enable router-website
 systemctl restart networking
 systemctl restart danted
 systemctl restart isc-dhcp-server
 systemctl start mullvad
+systemctl start router-website
