@@ -92,9 +92,6 @@ sysctl -w net.ipv6.conf.all.forwarding=1
     ip6tables -A INPUT -i lo -j ACCEPT
     ip6tables -A OUTPUT -o lo -j ACCEPT
 
-    # Allow traffic to WAN
-    iptables -A INPUT -i $WAN_IFNAME -j ACCEPT
-
     # Forward traffic from $LAN_IFNAME to $WG_IFNAME for IPv4 and IPv6
     iptables -A FORWARD -i $LAN_IFNAME -o $WG_IFNAME -j ACCEPT
     ip6tables -A FORWARD -i $LAN_IFNAME -o $WG_IFNAME -j ACCEPT
