@@ -116,6 +116,24 @@ sysctl -w net.ipv6.conf.all.forwarding=1
     iptables -t nat -A POSTROUTING -o $WG_IFNAME -j MASQUERADE
     ip6tables -t nat -A POSTROUTING -o $WG_IFNAME -j MASQUERADE
 
+    # Port forwarding
+    shopt -s nullglob
+    mkdir port-fw 2&>/dev/null
+    cd port-fw
+    for src_port in *
+    do
+            iptables -t nat -A PREROUTING -i $MAN_IFNAME -p tcp \
+                    --dport $src_port -j DNAT \
+                    --to-destination $(head -n 1 $src_port):$(tail -n 1 $src_port)
+    done
+    cd ..
+    iptables -A FORWARD -i $MAN_IFNAME -o $LAN_IFNAME -j ACCEPT
+    iptables -A FORWARD -i $LAN_IFNAME -o $MAN_IFNAME -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+    
+
+
+
 # Setup DNS
 cat >/etc/resolv.conf <<EOF
 nameserver $DNS_SERVER
