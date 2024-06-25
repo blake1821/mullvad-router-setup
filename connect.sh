@@ -16,6 +16,11 @@ MY_IPV6_ADDRESS=$(cat my6)
 cd ..
 PRIVATE_KEY_FILE=privatekey
 
+# constants
+WG_IFNAME=wg0
+LOCATION=us
+PORT=51820
+
 # Get relays
 if ! [ -f relays ]; then
     curl https://api.mullvad.net/app/v1/relays > relays
@@ -113,7 +118,7 @@ sysctl -w net.ipv6.conf.all.forwarding=1
 
     # Port forwarding
     shopt -s nullglob
-    mkdir port-fw 2&>/dev/null
+    mkdir port-fw 2>/dev/null
     cd port-fw
     for src_port in *
     do

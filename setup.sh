@@ -34,7 +34,7 @@ DNS6_SERVER=2606:4700:4700::1111
 
 # Write Variables
 echo $PRIVATE_KEY >privatekey
-mkdir vars 
+mkdir vars 2>/dev/null
 cd vars
 echo $LAN_IFNAME>lan
 echo $WAN_IFNAME>wan
