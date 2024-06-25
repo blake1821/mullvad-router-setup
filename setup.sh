@@ -1,9 +1,6 @@
 #!/bin/bash
 
-VPN_HOME=~/vpn
-rm -rf $VPN_HOME
-mkdir -p $VPN_HOME
-cp * $VPN_HOME
+VPN_HOME=`dirname $0`
 cd $VPN_HOME
 chmod a+x *.sh *.py
 
@@ -36,7 +33,6 @@ DNS6_SERVER=2606:4700:4700::1111
 
 # Write Variables
 echo $PRIVATE_KEY >privatekey
-echo $PUBLICK_KEY >publickey
 mkdir vars
 cd vars
 echo $LAN_IFNAME>lan
@@ -132,7 +128,7 @@ Description=Connect to mullvad VPN
 
 [Service]
 Type=simple
-ExecStart=/root/vpn/connect.sh
+ExecStart=$VPN_HOME/connect.sh
 Restart=no
 After=network.target
 
@@ -147,7 +143,7 @@ Description=Mullvad Router Website
 
 [Service]
 Type=simple
-ExecStart=/root/vpn/webserver.py
+ExecStart=$VPN_HOME/webserver.py
 Restart=always
 After=network.target
 

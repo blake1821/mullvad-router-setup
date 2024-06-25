@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VPN_HOME=~/vpn
+VPN_HOME=`dirname $0`
 cd $VPN_HOME
 
 # get variables from setup.sh
@@ -14,12 +14,6 @@ MY_IPV4_ADDRESS=$(cat my4)
 MY_IPV6_ADDRESS=$(cat my6)
 cd ..
 PRIVATE_KEY_FILE=privatekey
-PUBLIC_KEY_FILE=publickey
-
-# constants
-WG_IFNAME=wg0
-LOCATION=us
-PORT=51820
 
 # Get relays
 if ! [ -f relays ]; then
