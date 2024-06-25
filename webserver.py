@@ -4,7 +4,7 @@ from http.server import *
 from urllib.parse import urlparse, parse_qs
 import subprocess
 
-os.chdir(os.path.dirname(__file__))
+os.chdir(os.path.realpath(os.path.dirname(__file__)))
 
 def launch(program, *args):
     return subprocess.run([program, *args], stdout=subprocess.PIPE).stdout

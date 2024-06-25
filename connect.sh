@@ -1,6 +1,7 @@
 #!/bin/bash
 
 VPN_HOME=`dirname $0`
+VPN_HOME=`realpath $VPN_HOME`
 cd $VPN_HOME
 
 # get variables from setup.sh
