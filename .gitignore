@@ -1,6 +1,3 @@
 port-fw
-vars
-privatekey
-relay_ip_pubkeys
-relay_ip_pubkeys
-relays
+const
+endpoint

@@ -20,29 +20,24 @@ read -p "Enter the WAN interface name: " WAN_IFNAME
 read -p "Enter the MAN interface name: " MAN_IFNAME
 read -p "Enter the LAN interface name: " LAN_IFNAME
 echo
-echo Go to mullvad.net and create a new device.
-echo Generating Private Key...
+read -p "Enter a password for the router website: " ROUTER_PASSWORD
 PRIVATE_KEY=$(wg genkey)
-PUBLIC_KEY=$(echo $PRIVATE_KEY | wg pubkey)
-echo The public key is $PUBLIC_KEY
-read -p "Enter the IPV4 From Mullvad: " MY_IPV4_ADDRESS
-read -p "Enter the IPV6 From Mullvad: " MY_IPV6_ADDRESS
-
+LOGIN_COOKIE=$(cat /dev/urandom | head -c 20 | md5sum | head -c 20)
 
 DNS_SERVER=1.1.1.1
 DNS6_SERVER=2606:4700:4700::1111
 
-# Write Variables
+# Store the info
+mkdir const 2>/dev/null
+cd const
 echo $PRIVATE_KEY >privatekey
-mkdir vars 2>/dev/null
-cd vars
 echo $LAN_IFNAME>lan
 echo $WAN_IFNAME>wan
 echo $MAN_IFNAME>man
 echo $DNS_SERVER>dns
 echo $DNS6_SERVER>dns6
-echo $MY_IPV4_ADDRESS>my4
-echo $MY_IPV6_ADDRESS>my6
+echo $ROUTER_PASSWORD>psw
+echo $LOGIN_COOKIE>login-cookie
 cd ..
 
 # /etc/network/interfaces
@@ -158,5 +153,5 @@ systemctl enable router-website
 systemctl restart networking
 systemctl restart danted
 systemctl restart isc-dhcp-server
-systemctl start mullvad
-systemctl start router-website
+systemctl restart mullvad
+systemctl restart router-website

@@ -5,63 +5,52 @@ VPN_HOME=`realpath $VPN_HOME`
 cd $VPN_HOME
 
 # get variables from setup.sh
-cd vars
+cd const
 LAN_IFNAME=$(cat lan)
 WAN_IFNAME=$(cat wan)
 MAN_IFNAME=$(cat man)
 DNS_SERVER=$(cat dns)
 DNS6_SERVER=$(cat dns6)
-MY_IPV4_ADDRESS=$(cat my4)
-MY_IPV6_ADDRESS=$(cat my6)
 cd ..
-PRIVATE_KEY_FILE=privatekey
 
 # constants
 WG_IFNAME=wg0
-LOCATION=us
 PORT=51820
 
-# Get relays
-if ! [ -f relays ]; then
-    curl https://api.mullvad.net/app/v1/relays > relays
-
-    RELAY_IPS=$(mktemp);
-    RELAY_PUBKEYS=$(mktemp);
-
-    cat relays  \
-        | jq -r ".wireguard.relays[] | select(.location | startswith(\"$LOCATION\")) | .ipv4_addr_in" \
-        >$RELAY_IPS
-    cat relays  \
-        | jq -r ".wireguard.relays[] | select(.location | startswith(\"$LOCATION\")) | .public_key" \
-        >$RELAY_PUBKEYS
-
-    paste $RELAY_IPS $RELAY_PUBKEYS >relay_ip_pubkeys
-
-    rm $RELAY_IPS
-    rm $RELAY_PUBKEYS
-fi
-
-# Select a random IP
-ENDPOINT_IP_PUBKEY=`shuf relay_ip_pubkeys | head -1`
-ENDPOINT_IP=`echo "$ENDPOINT_IP_PUBKEY" | cut -f1`
-ENDPOINT_PUBKEY=`echo "$ENDPOINT_IP_PUBKEY" | cut -f2`
-
-# Set up the interface
 ip link del $WG_IFNAME 2>/dev/null
 ip link add dev $WG_IFNAME type wireguard
-ip addr add dev $WG_IFNAME $MY_IPV4_ADDRESS
-ip -6 addr add dev $WG_IFNAME $MY_IPV6_ADDRESS
-wg set $WG_IFNAME \
-    listen-port $PORT \
-    private-key $PRIVATE_KEY_FILE \
-    peer $ENDPOINT_PUBKEY \
-        endpoint $ENDPOINT_IP:$PORT \
-        allowed-ips 0.0.0.0/0,::/0
+
+# Default gateway IP
+DEFAULT_GATEWAY=$(ip route show | grep "default via" | awk '{print $3}')
+
+if [[ -f endpoint/relay_ip_pubkeys ]]; then 
+    cd endpoint
+    MY_IPV4_ADDRESS=$(cat my4)
+    MY_IPV6_ADDRESS=$(cat my6)
+
+    # Select a random endpoint IP
+    ENDPOINT_IP_PUBKEY=`shuf relay_ip_pubkeys | head -1`
+    ENDPOINT_IP=`echo "$ENDPOINT_IP_PUBKEY" | cut -f1`
+    ENDPOINT_PUBKEY=`echo "$ENDPOINT_IP_PUBKEY" | cut -f2`
+
+    # Set up the interface
+    ip addr add dev $WG_IFNAME $MY_IPV4_ADDRESS
+    ip -6 addr add dev $WG_IFNAME $MY_IPV6_ADDRESS
+    wg set $WG_IFNAME \
+        listen-port $PORT \
+        private-key ../const/privatekey \
+        peer $ENDPOINT_PUBKEY \
+            endpoint $ENDPOINT_IP:$PORT \
+            allowed-ips 0.0.0.0/0,::/0
+
+    # Make sure we can route to the endpoint through the default gateway
+    ip route add $ENDPOINT_IP via $DEFAULT_GATEWAY
+    cd ..
+fi
+
 ip link set up dev $WG_IFNAME
 
-# Set up routes
-DEFAULT_GATEWAY=$(ip route show | grep "default via" | awk '{print $3}')
-ip route add $ENDPOINT_IP via $DEFAULT_GATEWAY
+# Route all traffic through the wireguard tunnel
 ip route add 0.0.0.0/1 dev $WG_IFNAME
 ip route add 128.0.0.0/1 dev $WG_IFNAME
 ip -6 route delete default
@@ -92,9 +81,6 @@ sysctl -w net.ipv6.conf.all.forwarding=1
     ip6tables -A INPUT -i lo -j ACCEPT
     ip6tables -A OUTPUT -o lo -j ACCEPT
 
-    # Allow traffic to WAN
-    iptables -A INPUT -i $WAN_IFNAME -j ACCEPT
-
     # Forward traffic from $LAN_IFNAME to $WG_IFNAME for IPv4 and IPv6
     iptables -A FORWARD -i $LAN_IFNAME -o $WG_IFNAME -j ACCEPT
     ip6tables -A FORWARD -i $LAN_IFNAME -o $WG_IFNAME -j ACCEPT
@@ -122,16 +108,18 @@ sysctl -w net.ipv6.conf.all.forwarding=1
     cd port-fw
     for src_port in *
     do
-            iptables -t nat -A PREROUTING -i $MAN_IFNAME -p tcp \
-                    --dport $src_port -j DNAT \
-                    --to-destination $(head -n 1 $src_port):$(tail -n 1 $src_port)
+        iptables -t nat -A PREROUTING -i $MAN_IFNAME -p tcp \
+                --dport $src_port -j DNAT \
+                --to-destination $(head -n 1 $src_port):$(tail -n 1 $src_port)
     done
     cd ..
     iptables -A FORWARD -i $MAN_IFNAME -o $LAN_IFNAME -j ACCEPT
     iptables -A FORWARD -i $LAN_IFNAME -o $MAN_IFNAME -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-    
-
+    # Block outgoing connections on WAN except those to the peer
+    iptables -A OUTPUT -o $WAN_IFNAME -d $ENDPOINT_IP -j ACCEPT
+    iptables -A OUTPUT -o $WAN_IFNAME -j DROP
+    ip6tables -A OUTPUT -o $WAN_IFNAME -j DROP
 
 
 # Setup DNS
