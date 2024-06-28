@@ -17,6 +17,6 @@ $dst_port
 EOF
 fi
 
-systemctl restart mullvad 2&>1
+systemctl restart mullvad 2>&1
 sleep 1
 echo 'redirect'
