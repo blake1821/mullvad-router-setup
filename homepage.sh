@@ -225,7 +225,7 @@ EOF
             <td>$(head $src_port -n 1)</td>
             <td>$(tail $src_port -n 1)</td>
             <td>
-                    <form method=\"GET\" action=\"/add-port-fw\">
+                    <form method=\"POST\" action=\"/add-port-fw\">
                     <input type=\"hidden\" name=\"sp\" value=\"$src_port\"/>
                     <input type=\"hidden\" name=\"da\" value=\"delete\"/>
                     <input type=\"hidden\" name=\"dp\" value=\"delete\"/>
