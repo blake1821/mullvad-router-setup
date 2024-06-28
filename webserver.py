@@ -22,21 +22,18 @@ with open('const/login-cookie') as login_cookie_file:
 with open('const/psw') as password_file:
     password = password_file.read().strip()
 
-
 class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         content_len = int(self.headers.get('Content-Length', 0))
         body = ""
         if content_len:
             body = self.rfile.read(content_len).decode('utf-8')
+        body_args = parse_qs(body)
+        self.do_GET(body_args)
 
-        self.do_GET(body)
-
-    def do_GET(self, body=""):
+    def do_GET(self, args:dict[str, list[str]] = {}):
         parsed_path = urlparse(self.path)
         path = parsed_path.path
-        query = parsed_path.query
-        args = parse_qs(query)
 
         # get the login cookie
         cookies_string = self.headers.get('Cookie')
@@ -51,8 +48,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             with open('./style.css', 'rb') as stylesheet:
                 response = stylesheet.read()
         elif login_cookie != LOGIN_COOKIE:
-            body_args = parse_qs(body)
-            if 'password' in body_args and body_args['password'][0] == password:
+            if 'password' in args and args['password'][0] == password:
                 response = 'authenticate'
             else:
                 with open('login.html', 'rb') as login_page:
@@ -63,16 +59,28 @@ class RequestHandler(BaseHTTPRequestHandler):
             elif path.startswith('/restart'):
                 response = launch('./restart.sh')
             elif path.startswith('/configure'):
-                ep_type = args['endpoint-type'][0]
-                my4 = args['my4'][0]
-                my6 = args['my6'][0]
-                if ep_type == 'mullvad':
-                    location = args['location'][0]
-                    response = launch('./configure.sh', 'mullvad', my4, my6, location)
-                else:
-                    endpoint_ip = args['endpoint-ip'][0]
-                    endpoint_pubkey = args['endpoint-pubkey'][0]
-                    response = launch('./configure.sh', 'custom', my4, my6, endpoint_ip, endpoint_pubkey)
+                response = launch('./configure.sh', args['type'][0], args['id'][0])
+            elif path.startswith('/mullvad-add'):
+                response = launch('./mullvad-add.sh', args['location'][0], args['my4'][0], args['my6'][0])
+            elif path.startswith('/mullvad-forget'):
+                response = launch('./mullvad-forget.sh', args['id'][0])
+            elif path.startswith('/vultr-link'):
+                api_key = args['api-key'][0]
+                try:
+                    os.mkdir('vultr')
+                except:
+                    pass
+                with open('vultr/api-key', 'w') as api_key_file:
+                    api_key_file.write(api_key)
+                    response = 'redirect'.encode('utf-8')
+            elif path.startswith('/vultr-add'):
+                response = launch('./vultr-add.sh', args['plan'][0], args['location'][0])
+            elif path.startswith('/vultr-details'):
+                instance_id = args['instance-id'][0]
+                with open(f'vultr/instance-{instance_id}', 'rb') as instance_file:
+                    response = instance_file.read()
+            elif path.startswith('/vultr-destroy'):
+                response = launch('./vultr-destroy.sh', args['instance-id'][0])
             else:
                 response = launch('./homepage.sh')
 

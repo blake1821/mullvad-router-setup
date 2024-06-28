@@ -10,7 +10,7 @@ echo ==============================
 echo
 
 # Install packages
-apt install wireguard jq curl iptables isc-dhcp-server dante-server dnsmasq
+apt install wireguard jq curl iptables isc-dhcp-server dante-server dnsmasq sshpass
 
 # Prompt for information
 echo Here are the different interfaces: 

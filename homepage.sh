@@ -2,6 +2,8 @@
 
 # Web page script
 
+shopt -s nullglob
+
 endpoint_ip=$(wg | grep 'endpoint:' | awk '{ print $2 }' | cut -d ':' -f 1) 2>&1
 if [[ -z $endpoint_ip ]]; then
     connected_message="&#10060; Not connected"
@@ -22,26 +24,50 @@ cat <<EOF
     <div class="centered">
     <div>
         <p style="margin: 0px;">$connected_message</p>
-        <form method="GET" action="/restart">
+        <form method="POST" action="/restart">
             <input class="margin-top" type="submit" value="restart">
         </form>
     </div>
     </div>
     <hr/>
-    <h2>Configure the Peer Connection</h2>
-    <p>The public key is <span class="code">$public_key</code></p>
-    <form method="GET" action="/configure" class="centered">
-        <div>
-        <table>
-        <tr>
-            <td>Peer type:</td>
+    <h3>Mullvad Devices</h3>
+    <div class="centered">
+    <table>
+EOF
+        mkdir mullvad 2>/dev/null
+        cd mullvad
+        for mv_id in *; do
+            echo "<tr>"
+            exec 3<$mv_id
+            location=$(head -n 1 <&3)
+            cat <<EOF
+            <td>$location</td>
             <td>
-                <select id="endpoint-type" name="endpoint-type" onchange="change()">
-                    <option value="mullvad">Mullvad</option>
-                    <option value="custom">Custom</option>
-                </select>
+                <form method="POST" action="/configure">
+                    <input type="hidden" name="type" value="mullvad">
+                    <input type="hidden" name="id" value="$mv_id">
+                    <input type="submit" value="set peer">
+                </form>
             </td>
-        </tr>
+            <td>
+                <form method="POST" action="/mullvad-forget">
+                    <input type="hidden" name="id" value="$mv_id">
+                    <input type="submit" value="forget">
+                </form>
+            </td>
+EOF
+            exec 3<&-
+            echo "</tr>"
+        done
+        cd ..
+cat <<EOF
+    </table>
+    </div>
+    <h3>Add a Mullvad Device</h3>
+    <p>The public key is <span class="code">$public_key</code></p>
+    <form method="POST" action="/mullvad-add" class="centered">
+    <div>
+        <table>
         <tr>
             <td>IPv4:</td>
             <td><input name="my4" type="text" placeholder="23.7.15.131/32"></td>
@@ -50,37 +76,114 @@ cat <<EOF
             <td>IPv6:</td>
             <td><input name="my6" type="text" placeholder="fc00:bcbc::1/128"></td>
         </tr>
-        <tbody id="ep:mullvad" style="">
+        <tr>
+            <td>Location: </td>
+            <td><input name="location" type="text" placeholder="us"></td>
+        </tr>
+        </table>
+        <input class="margin-top" type="submit" value="add">
+    </div>
+    </form>
+    <hr/>
+EOF
+    if [[ -f vultr/api-key ]]; then
+cat <<EOF
+    <h3>Vultr Instances</h3>
+    <div class="centered">
+    <table>
+EOF
+        cd vultr
+        for instance_file in instance-*; do
+            echo "<tr>"
+            exec 3<$instance_file
+            first_line=$(head -n 1 <&3)
+            if [[ $first_line == 'loading' ]]; then
+                echo "<td>Loading...</td> <td></td> <td></td> <td></td>"
+            else
+                instance_id=$first_line
+                instance_ipv4=$(head -n 1 <&3)
+                instance_pubkey=$(head -n 1 <&3)
+                cat <<EOF
+                <td>$instance_ipv4</td>
+                <td>
+                    <form method="POST" action="/vultr-details">
+                        <input type="hidden" name="instance-id" value="$instance_id">
+                        <input type="submit" value="details">
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="/configure">
+                        <input type="hidden" name="type" value="vultr">
+                        <input type="hidden" name="id" value="$instance_id">
+                        <input type="submit" value="set peer">
+                    </form>
+                </td>
+                <td>
+                    <form method="POST" action="/vultr-destroy">
+                        <input type="hidden" name="instance-id" value="$instance_id">
+                        <input type="submit" value="destroy">
+                    </form>
+                </td>
+EOF
+            fi
+            exec 3<&-
+            echo "</tr>"
+        done
+        cd ..
+cat <<EOF
+    </table>
+    </div>
+    <h3>Create New Instance</h3>
+    <em style="font-size:8pt">Use ./vultr-list.sh and then modify ./homepage.sh to add more options</em><br/>
+    <form class="centered" method="POST" action="/vultr-add">
+    <div>
+        <table>
+            <tr>
+                <td>Plan: </td>
+                <td><select required name="plan">
+                    <option value="vc2-1c-1gb">VC2, 1c, 1GB, 1TB Bandwidth, \$5/month</option>
+                    <option value="vhp-1c-1gb-amd">VHP-AMD, 1c, 1GB, 2TB Bandwidth, \$6/month</option>
+                </select></td>
+            </tr>
             <tr>
                 <td>Location: </td>
-                <td><input name="location" type="text" placeholder="us"></td>
+                <td><select required name="location">
+                    <option value="ewr">New Jersey</option>
+                    <option value="ord">Chicago</option>
+                    <option value="dfw">Dallas</option>
+                    <option value="sea">Seattle</option>
+                    <option value="lax">Los Angeles</option>
+                    <option value="atl">Atlanta</option>
+                    <option value="sjc">Silicon Valley</option>
+                    <option value="yto">Toronto</option>
+                    <option value="mia">Miami</option>
+                </select></td>
             </tr>
-        </tbody>
-        <tbody id="ep:custom" style="display: none;">
-            <tr>
-                <td>Peer IP: </td>
-                <td><input name="endpoint-ip" type="text"></td>
-            </tr>
-            <tr>
-                <td>Peer Pubkey: </td>
-                <td><input name="endpoint-pubkey" type="text"></td>
-            </tr>
-        </tbody>
         </table>
-        <input class="margin-top" type="submit" value="submit">
-        <script>
-            function change(){
-                if(document.getElementById('endpoint-type').value == 'mullvad'){
-                    document.getElementById('ep:mullvad').style = '';
-                    document.getElementById('ep:custom').style = 'display: none;';
-                }else{
-                    document.getElementById('ep:custom').style = '';
-                    document.getElementById('ep:mullvad').style = 'display: none;';
-                }
-            }
-        </script>
-        </div>
+        <input class="margin-top" type="submit" value="add">
+    </div>
     </form>
+
+EOF
+    else
+cat <<EOF
+    <div class="centered">
+    <div>
+        <p>Link your Vultr account</p>
+        <form method="POST" action="/vultr-link">
+            <table>
+                <tr>
+                    <td>API Key: </td>
+                    <td><input required type="text" name="api-key"/></td>
+                </tr>
+            </table>
+            <input class="margin-top" type="submit" value="link">
+        </form>
+    </div>
+    </div>
+EOF
+    fi
+cat <<EOF
     <hr/>
     <h2>Client List</h2>
     <div class="centered">
@@ -112,7 +215,6 @@ cat <<EOF
             <th></th>
         </tr>
 EOF
-    shopt -s nullglob
     mkdir port-fw 2>/dev/null
     cd port-fw
     for src_port in *
@@ -140,7 +242,7 @@ cat <<EOF
 
     <h3>Forward a new port:</h3>
     <div class="centered">
-    <form method="GET" action="/add-port-fw">
+    <form method="POST" action="/add-port-fw">
         <table>
             <tr>
                 <td><label for="sp">Source Port: </label></td>
@@ -155,7 +257,7 @@ cat <<EOF
                 <td><input required type="number" name="dp" id="dp"/></td>
             </tr>
         </table>
-        <input type="submit" value="add">
+        <input class="margin-top" type="submit" value="add">
     </form>
     </div>
     <br/>

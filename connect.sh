@@ -23,29 +23,46 @@ ip link add dev $WG_IFNAME type wireguard
 # Default gateway IP
 DEFAULT_GATEWAY=$(ip route show | grep "default via" | awk '{print $3}')
 
-if [[ -f endpoint/relay_ip_pubkeys ]]; then 
-    cd endpoint
-    MY_IPV4_ADDRESS=$(cat my4)
-    MY_IPV6_ADDRESS=$(cat my6)
+if [[ -f endpoint ]]; then 
+    TYPE=$(head -n 1 endpoint)
+    ID=$(tail -n 1 endpoint)
 
-    # Select a random endpoint IP
-    ENDPOINT_IP_PUBKEY=`shuf relay_ip_pubkeys | head -1`
-    ENDPOINT_IP=`echo "$ENDPOINT_IP_PUBKEY" | cut -f1`
-    ENDPOINT_PUBKEY=`echo "$ENDPOINT_IP_PUBKEY" | cut -f2`
+    if [[ $TYPE == 'mullvad' && -f mullvad/$ID ]]; then
+        exec 3<mullvad/$ID
+        LOCATION=$(head -n 1 <&3)
+        MY_IPV4_ADDRESS=$(head -n 1 <&3)
+        MY_IPV6_ADDRESS=$(head -n 1 <&3)
 
-    # Set up the interface
-    ip addr add dev $WG_IFNAME $MY_IPV4_ADDRESS
-    ip -6 addr add dev $WG_IFNAME $MY_IPV6_ADDRESS
-    wg set $WG_IFNAME \
-        listen-port $PORT \
-        private-key ../const/privatekey \
-        peer $ENDPOINT_PUBKEY \
-            endpoint $ENDPOINT_IP:$PORT \
-            allowed-ips 0.0.0.0/0,::/0
+        # Select a random endpoint IP
+        ENDPOINT_IP_PUBKEY=$(shuf <&3 | head -n 1)
+        ENDPOINT_IP=`echo "$ENDPOINT_IP_PUBKEY" | cut -f1`
+        ENDPOINT_PUBKEY=`echo "$ENDPOINT_IP_PUBKEY" | cut -f2`
+        exec 3<&-
+    elif [[ $TYPE == 'vultr' ]]; then
+        exec 3<vultr/instance-$ID
+        INSTANCE_ID=$(head -n 1 <&3)
+        ENDPOINT_IP=$(head -n 1 <&3)
+        ENDPOINT_PUBKEY=$(head -n 1 <&3)
+        MY_IPV4_ADDRESS="10.0.33.2/24"
+        MY_IPV6_ADDRESS="fc00:3333::2/120"
+        exec 3<&-
+    fi
 
-    # Make sure we can route to the endpoint through the default gateway
-    ip route add $ENDPOINT_IP via $DEFAULT_GATEWAY
-    cd ..
+    if [[ $MY_IPV4_ADDRESS != "" ]]; then
+        # Set up the interface
+        ip addr add dev $WG_IFNAME $MY_IPV4_ADDRESS
+        ip -6 addr add dev $WG_IFNAME $MY_IPV6_ADDRESS
+        wg set $WG_IFNAME \
+            listen-port $PORT \
+            private-key ./const/privatekey \
+            peer $ENDPOINT_PUBKEY \
+                endpoint $ENDPOINT_IP:$PORT \
+                allowed-ips 0.0.0.0/0,::/0
+        
+        # Make sure we can route to the endpoint through the default gateway
+        ip route add $ENDPOINT_IP via $DEFAULT_GATEWAY
+    fi
+
 fi
 
 ip link set up dev $WG_IFNAME
