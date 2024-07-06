@@ -1,7 +1,7 @@
 
 from typing import Optional
 
-from config.data_access import ConfigAccessor
+from config.config_access import ConfigAccessor
 from util import bash, write_file
 
 class Service:

@@ -1,5 +1,5 @@
 from typing import Literal, Union
-from config.data_access import ConfigAccessor
+from config.config_access import ConfigAccessor
 from services.service import Service
 
 

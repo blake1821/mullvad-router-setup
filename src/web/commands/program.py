@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from typing import Any, Generic, Literal, TypeVar, cast
 
-from config.data_access import ConfigAccessor
+from config.config_access import ConfigAccessor
 from web.commands.param_type import ParamType
 from web.context import RequestContext
 

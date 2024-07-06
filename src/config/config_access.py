@@ -68,6 +68,10 @@ class ConfigAccessor:
         return self._load()['wg_port']
 
     @property
+    def admin_port(self) -> int:
+        return self._load()['admin_port']
+
+    @property
     def vultr_my_ipv4_interface(self) -> IPv4Interface:
         return self._load()['vultr_my_ipv4_interface']
 

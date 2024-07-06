@@ -28,6 +28,7 @@ class SetupConfig(TypedDict):
     wg_ifname: IfName
     proxy_port: int
     wg_port: int
+    admin_port: int
     vultr_my_ipv4_interface: IPv4Interface
     vultr_my_ipv6_interface: IPv6Interface
 
@@ -44,6 +45,7 @@ def get_default_setup_config() -> SetupConfig:
         'wg_ifname': IfName('wg0'),
         'proxy_port': 1080,
         'wg_port': 51820,
+        'admin_port': 80,
         'vultr_my_ipv4_interface': IPv4Interface('10.0.33.2/24'),
         'vultr_my_ipv6_interface': IPv6Interface('fc00:3333::2/120')
     }
@@ -132,7 +134,7 @@ def init_config():
 
 def get_setup_config() -> SetupConfig:
     if not os.path.exists(CONFIG_FILENAME):
-        raise FileNotFoundError('Cannot find config file')
+        init_config()
     
     with open(CONFIG_FILENAME, 'r') as config_file:
         config_data = json.load(config_file)

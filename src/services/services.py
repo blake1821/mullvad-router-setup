@@ -1,6 +1,6 @@
 import time
 from typing import Literal
-from config.data_access import ReloadHandler
+from config.config_access import ReloadHandler
 from services.CustomService import CustomService
 from services.DHCPService import DHCPService
 from services.DHCPv6Service import DHCPv6Service
@@ -24,7 +24,7 @@ MULLVAD_SERVICE = CustomService(
 ROUTER_WEBSITE_SERVICE = CustomService(
     name='router-website',
     description='mullvad-router website',
-    exec_path=f'{vpn_home}/webserver.py',
+    exec_path=f'{vpn_home}/website.sh',
     restart_mode='always'
 )
 DHCP_SERVICE = DHCPService()

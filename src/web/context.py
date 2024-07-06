@@ -1,6 +1,6 @@
 from http.cookies import Morsel, SimpleCookie
 from typing import Literal, Mapping, Optional, Self
-from config.data_access import ConfigAccessor
+from config.config_access import ConfigAccessor
 from util import cookie_expiration_date
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs

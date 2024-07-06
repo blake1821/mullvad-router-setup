@@ -1,7 +1,7 @@
 from time import sleep
 from data.network import PrivateKey
 from data.vultr import VULTR_LOCATIONS, VULTR_PLANS, VultrInstance, VultrInstanceHost
-from config.data_access import ConfigAccessor
+from config.config_access import ConfigAccessor
 from network.nc import is_tcp_port_open
 from util import bash
 from api.vultr import VultrInstanceResponse, VultrAPI

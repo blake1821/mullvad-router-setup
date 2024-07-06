@@ -1,6 +1,6 @@
 from config.config import Config, ConfigManager, get_setup_config
 from data.network import IfName, PrivateKey
-from config.data_access import ConfigAccessor
+from config.config_access import ConfigAccessor
 from services.services import SERVICES, MullvadReloadHandler
 from util import bash, get_random_string
 

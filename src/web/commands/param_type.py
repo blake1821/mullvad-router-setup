@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Callable, Generic, Optional, TypeVar, cast
 
 from data.mullvad import MullvadDevice
-from config.data_access import ConfigAccessor
+from config.config_access import ConfigAccessor
 from util import Describable, Id, IdMap, Identifiable
 from data.vpn import VPN
 
