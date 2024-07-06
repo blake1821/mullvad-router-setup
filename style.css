@@ -54,3 +54,7 @@ body {
 h3 {
     margin-bottom: 0px;
 }
+
+form {
+    display: inline;
+}
