@@ -1,16 +1,18 @@
 from web.commands.program import Program
 from web.commands.param_type import PASSWORD_PARAM_TYPE
+from web.components.template import Template
 from web.context import RequestContext, Page, Response
-from web.form import HTMLTableForm
+from web.form import HTMLTableFormBuilder
 from web.route import CommandHandler, RequestHandler, Router, StaticPageHandler
-from web.pages.template import PageTemplate
+
+
 
 class AuthHandler(RequestHandler):
     def __init__(self,
                  protected_handler: RequestHandler,
                  login_cookie: str,
                  login_password: str,
-                 page_template: PageTemplate,
+                 page_template: Template[Page, str],
                  file_not_found_page: Page):
         self.login_router = Router(file_not_found_page)
         self.protected_handler = protected_handler
@@ -26,12 +28,12 @@ class AuthHandler(RequestHandler):
             'POST', '/login', CommandHandler('/', LoginProgram)
         )
 
-        login_page = page_template.get_page(
-            HTMLTableForm(login_route, 'Log In').html
+        login_page = page_template.render(
+            HTMLTableFormBuilder('Log In').build(login_route)
         )
 
         self.login_router.add_route(
-            None, '', StaticPageHandler(login_page)
+            None, '/', StaticPageHandler(login_page)
         )
 
 

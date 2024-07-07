@@ -26,9 +26,12 @@ class ParamType(Generic[T], ABC):
 
 
 class TextParamType(ParamType[str]):
+    def __init__(self, placeholder: Optional[str] = None) -> None:
+        self.placeholder = placeholder or ""
+
     def build_html_input(self, *, name: str) -> str:
         return f"""
-            <input type="text" name="{name}" required>
+            <input type="text" name="{name}" required placeholder="{self.placeholder}">
         """
 
     def parse_or_throw(self, value: str, config: ConfigAccessor) -> str:
@@ -48,9 +51,12 @@ PASSWORD_PARAM_TYPE = PasswordParamType()
 
 
 class IntParamType(ParamType[int]):
+    def __init__(self, placeholder: Optional[int]=None) -> None:
+        self.placeholder = placeholder if placeholder is not None else ""
+
     def build_html_input(self, *, name: str) -> str:
         return f"""
-            <input type="number" step="1" name="{name}" required>
+            <input type="number" step="1" name="{name}" required placeholder="{self.placeholder}">
         """
 
     def parse_or_throw(self, value: str, config: ConfigAccessor) -> int:

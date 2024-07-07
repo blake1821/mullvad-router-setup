@@ -4,11 +4,12 @@ from config.config import ConfigManager
 from config.config_access import ConfigAccessor
 from services.services import MULLVAD_SERVICE, MullvadReloadHandler
 from web.commands.programs import CommandRoutes
+from web.components.template import CenteredPanelTemplate, DefaultPageTemplate
 from web.context import HTTPMethod, RequestContext, Page
 from web.auth import AuthHandler
 from web.pages.homepage import HomepageHandler
-from web.route import Router, StaticFileHandler
-from web.pages.template import RouterBaseTemplate, RouterCenteredTemplate
+from web.route import Router
+from web.static import StaticRoutes
 
 def reload():
     MULLVAD_SERVICE.restart()
@@ -19,23 +20,23 @@ config = ConfigAccessor(ConfigManager(), MullvadReloadHandler())
 file_not_found_page = Page('File not found')
 
 root_handler = Router(file_not_found_page)
-stylesheet = root_handler.add_route('GET', '/style.css', StaticFileHandler('style.css'))
+static_routes = StaticRoutes(root_handler, 'static')
 
-base_template = RouterBaseTemplate(
-    stylesheet
+base_template = DefaultPageTemplate(
+    static_routes,
+    'Mullvad Router',
 )
 
-login_page_template = RouterCenteredTemplate(
-    stylesheet,
-    'Log In'
+login_page_template = CenteredPanelTemplate(
+    'VPN Router'
 )
 
 protected_handler = Router(file_not_found_page)
-root_handler.add_route(None, '',  AuthHandler(
+root_handler.add_route(None, '/',  AuthHandler(
     protected_handler,
     config.login_cookie,
     config.router_password,
-    login_page_template,
+    base_template.compose(login_page_template),
     file_not_found_page
 ))
 
@@ -56,7 +57,6 @@ class RouterWebsite(BaseHTTPRequestHandler):
         )
         response = root_handler.handle(ctx)
         ctx.send_response(response)
-
 
     def do_POST(self):
         self._handle('POST')

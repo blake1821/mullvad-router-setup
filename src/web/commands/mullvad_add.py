@@ -5,7 +5,7 @@ from network.firewall import set_basic_v4_firewall
 from network.ip import remove_reroute, set_forwarding_enabled
 from services.services import  MULLVAD_SERVICE, PROXY_SERVICE
 from util import Id, get_random_string
-from web.commands.param_type import TEXT_PARAM_TYPE, SelectParamType
+from web.commands.param_type import SelectParamType, TextParamType
 from web.commands.program import Program
 from web.context import RequestContext
 
@@ -15,8 +15,8 @@ class AddMullvadDeviceProgram(Program):
         id_map=MULLVAD_LOCATIONS
     ).param("Location")
 
-    my_ipv4_interface = TEXT_PARAM_TYPE.param('IPv4')
-    my_ipv6_interface = TEXT_PARAM_TYPE.param('IPv6')
+    my_ipv4_interface = TextParamType(placeholder='10.42.192.33/32').param('IPv4')
+    my_ipv6_interface = TextParamType(placeholder='fc00:bcbc::1/128').param('IPv6')
     
     def execute(self, context: RequestContext) -> None:
         config = context.config

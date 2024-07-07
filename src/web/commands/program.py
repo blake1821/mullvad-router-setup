@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from typing import Any, Generic, Literal, TypeVar, cast
+from typing import Any, Generic, Literal, Optional, TypeVar, cast
 
 from config.config_access import ConfigAccessor
 from web.commands.param_type import ParamType
@@ -10,10 +10,12 @@ class CommandParam(Generic[T]):
     def __init__(self, *,
                  name: str,
                  display_name: str,
-                 type: ParamType[T]):
+                 type: ParamType[T],
+                 placeholder: Optional[str] = None):
         self.name = name
         self.display_name = display_name
         self.type = type
+        self.placeholder = placeholder
     
     def build_html_input(self):
         return self.type.build_html_input(name=self.name)

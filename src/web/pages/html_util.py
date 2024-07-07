@@ -1,7 +1,7 @@
 from typing import Optional
 from html import escape
 
-def get_html_table(rows: list[list[str]], headers:Optional[list[str]] = None) -> str:
+def render_html_table(rows: list[list[str]], headers:Optional[list[str]] = None) -> str:
 
     def get_row(row: list[str]) -> str:
         return f'''<tr>

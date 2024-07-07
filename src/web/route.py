@@ -36,10 +36,14 @@ class Route(Generic[H]):
                  method: Optional[HTTPMethod],
                  path: str,
                  handler: H):
+        assert path.startswith('/')
         self.router = router
         self.method = method
         self.handler = handler
         self.path = path
+    
+    def __str__(self) -> str:
+        return self.path
 
 AnyRoute = Route[RequestHandler]
 

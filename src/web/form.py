@@ -1,14 +1,14 @@
 from web.commands.program import Program, CommandParam, Command
-from web.pages.html_util import get_html_table
+from web.pages.html_util import render_html_table
 from web.route import CommandRoute
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 
 P = TypeVar('P', bound=Program)
-class HTMLForm(ABC, Generic[P]):
-    def __init__(self,
+class HTMLFormBuilder(ABC):
+    def build(self,
                  command_route: CommandRoute[P],
                  *,
                  command: Optional[Command[P]] = None):
@@ -23,7 +23,7 @@ class HTMLForm(ABC, Generic[P]):
             hidden_args = command.serialize_args()
             unassigned_params = command.get_unassigned_params()
 
-        self.html = f'''
+        return f'''
         <form method="POST" action="{path}">
             {"".join(
                 f'<input type="hidden" name="{name}" value={value}>'
@@ -43,35 +43,24 @@ class HTMLForm(ABC, Generic[P]):
         pass
 
 
-class HTMLTableForm(HTMLForm[P]):
-    def __init__(self,
-                 command_route: CommandRoute[P],
-                 submit_text: str,
-                 *,
-                 command: Optional[Command[P]] = None):
+class HTMLTableFormBuilder(HTMLFormBuilder):
+    def __init__(self, submit_text: str):
         self.submit_text = submit_text
-        super().__init__(command_route, command=command)
 
     def _build_inside(self, params: list[CommandParam[Any]]) -> str:
         return f'''
-            {get_html_table([
-                [param.display_name, param.build_html_input()]
+            {render_html_table([
+                [param.display_name+": ", param.build_html_input()]
                 for param in params
             ])}
             <input class="margin-top" type="submit" value="{self.submit_text}">
         '''
 
 
-class SubmitButtonForm(HTMLForm[P]):
-    def __init__(self,
-                 command_route: CommandRoute[P],
-                 submit_text: str,
-                 *,
-                 command: Optional[Command[P]] = None,
-                 margin_top: bool = False):
+class ButtonFormBuilder(HTMLFormBuilder):
+    def __init__(self, submit_text: str, margin_top: bool = False):
         self.submit_text = submit_text
         self.margin_top = margin_top
-        super().__init__(command_route, command=command)
 
     def _build_inside(self, params: list[CommandParam[Any]]) -> str:
         assert len(params) == 0
