@@ -29,7 +29,7 @@ To get the VPN up and running:
 2. Log into your Mullvad account, go to Devices, and in the Advanced section, add a new device with the public key shown on the router website.
 3. Copy the IPv4 and IPv6 to the router website form, then submit.
 ![image](https://github.com/blake1821/mullvad-router-setup/assets/124000747/17ad1bdd-6018-4c63-9736-278049cba0da)
-
+4. Press the button next to the newly added device labeled "Set VPN".
 
 
 ## Use the SOCKS5 proxy
