@@ -3,13 +3,16 @@ import os
 import json
 from typing import Any, Literal, Optional, TypedDict
 
-from config.transformer import ATOM_TRANSFORMERS, DataclassTransformer, JsonObj, LeafTransformer, NestedTransfomer, StringInitTransformer, Transformer
+from config.transformer import Transformer, BaseTransformerRegistry, TransformerRegistry
 from data.mullvad import MULLVAD_LOCATIONS, MullvadDevice, MullvadLocation, MullvadRelay
 from data.network import IfName, PrivateKey, PublicKey
 from data.vultr import ApiKey, VultrInstance, VultrInstanceHost
-from util import Id
+from util.typing import JsonObj, TypeDescription
+from util.util import Id
 
 CONFIG_FILENAME = 'config.json'
+
+# Config-file-only objects
 
 class VultrInstanceCfg(TypedDict):
     host: Optional[VultrInstanceHost]
@@ -19,6 +22,13 @@ class VultrInstanceCfg(TypedDict):
 class VPNSelectionCfg(TypedDict):
     type: Literal['mullvad', 'vultr']
     id: Id[Any]
+
+class PortForwardCfg(TypedDict):
+    dst_addr: IPv4Address
+    dst_port: int
+
+# A setup config is the subset of a config that is used for the setup script
+# It is not sufficient to run the other scripts
 
 class SetupConfig(TypedDict):
     dns: IPv4Address
@@ -31,10 +41,6 @@ class SetupConfig(TypedDict):
     admin_port: int
     vultr_my_ipv4_interface: IPv4Interface
     vultr_my_ipv6_interface: IPv6Interface
-
-class PortForwardCfg(TypedDict):
-    dst_addr: IPv4Address
-    dst_port: int
 
 def get_default_setup_config() -> SetupConfig:
     return {
@@ -63,46 +69,46 @@ class Config(SetupConfig):
     login_cookie: str
     vultr_api_key: Optional[ApiKey]
 
-class MullvadLocationTransformer(LeafTransformer[MullvadLocation]):
-    def __init__(self):
-        super().__init__(MullvadLocation)
-    
+# Create the data transformers for the config files
+# (Recall that these are used to convert between python classes and the JSON representation)
+
+class MullvadLocationTransformer(Transformer[MullvadLocation]):
+    """Transforms a MullvadLocation to and from a string id"""
+
     def parse(self, json: JsonObj) -> MullvadLocation:
         assert isinstance(json, str)
         return MULLVAD_LOCATIONS[Id(json)]
     
     def serialize(self, value: MullvadLocation) -> JsonObj:
         return value.get_id()
+
+    @classmethod
+    def create(cls, type_description: TypeDescription[MullvadLocation], transformer_registry: BaseTransformerRegistry) -> Transformer[MullvadLocation]:
+        return MullvadLocationTransformer()
+    
     
 
-CONFIG_TRANSFORMERS: list[Transformer[Any]] = [
-    *ATOM_TRANSFORMERS,
-    StringInitTransformer(IPv4Address),
-    StringInitTransformer(IPv6Address),
-    StringInitTransformer(IPv4Interface),
-    StringInitTransformer(IPv6Interface),
-    StringInitTransformer(PublicKey),
-    StringInitTransformer(PrivateKey),
-    StringInitTransformer(Id),
-    StringInitTransformer(IfName),
-    StringInitTransformer(ApiKey),
-    DataclassTransformer(MullvadRelay),
-    DataclassTransformer(MullvadDevice),
-    DataclassTransformer(VultrInstanceHost),
-    MullvadLocationTransformer()
-]
+config_transformer_registry = TransformerRegistry()\
+    .register_stringlike(IPv4Address)\
+    .register_stringlike(IPv6Address)\
+    .register_stringlike(IPv4Interface)\
+    .register_stringlike(IPv6Interface)\
+    .register_stringlike(PublicKey)\
+    .register_stringlike(PrivateKey)\
+    .register_stringlike(Id)\
+    .register_stringlike(IfName)\
+    .register_stringlike(ApiKey)\
+    .register_dataclass(MullvadRelay)\
+    .register_dataclass(MullvadDevice)\
+    .register_dataclass(VultrInstanceHost)\
+    .register_transformer(MullvadLocation, MullvadLocationTransformer.create)
 
-CONFIG_TRANSFORMER = NestedTransfomer(
-    Config,
-    CONFIG_TRANSFORMERS
-)
-
-SETUP_CONFIG_TRANSFORMER = NestedTransfomer(
-    SetupConfig,
-    CONFIG_TRANSFORMERS
-)
+CONFIG_TRANSFORMER = config_transformer_registry.get_transformer(Config)
+SETUP_CONFIG_TRANSFORMER = config_transformer_registry.get_transformer(SetupConfig)
 
 class ConfigManager:
+    """Singleton class that saves and loads the config file"""
+
     def __init__(self):
         self._cache : Optional[Config] = None
     
@@ -125,6 +131,7 @@ class ConfigManager:
         
 
 def init_config():
+    """Create a setup config file with default values"""
     with open(CONFIG_FILENAME, 'w') as setup_config_file:
         json.dump(
             SETUP_CONFIG_TRANSFORMER.serialize(get_default_setup_config()),
@@ -133,6 +140,7 @@ def init_config():
         )
 
 def get_setup_config() -> SetupConfig:
+    """Get the setup config from the config file, or create it if it doesn't exist"""
     if not os.path.exists(CONFIG_FILENAME):
         init_config()
     

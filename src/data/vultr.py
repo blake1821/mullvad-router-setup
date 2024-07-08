@@ -3,7 +3,7 @@ from ipaddress import IPv4Address
 from typing import NewType, Self
 
 from data.network import PublicKey
-from util import Describable, Id, Identifiable, create_id_map
+from util.util import Describable, Id, Identifiable, create_id_map
 
 @dataclass
 class VultrInstanceHost:

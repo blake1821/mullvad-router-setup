@@ -4,7 +4,7 @@ from typing import Optional
 from config.config import ConfigManager
 from data.mullvad import MullvadDevice
 from data.network import PublicKey
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from network.firewall import forward_port, set_vpn_firewall
 from network.ip import add_interface_ip, add_route_to_peer, bring_interface_up, reset_wg_interface, route_traffic_through_interface, set_forwarding_enabled
 import random
@@ -20,7 +20,7 @@ class PeerConnection:
     pubkey: PublicKey
 
 
-config = ConfigAccessor(ConfigManager(), MullvadReloadHandler())
+config = ConfigDAO(ConfigManager(), MullvadReloadHandler())
 
 reset_wg_interface(config.wg_ifname)
 

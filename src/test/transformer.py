@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from ipaddress import IPv4Address, IPv6Address
 import json
 from typing import Literal, Optional, TypedDict
-from config.transformer import ATOM_TRANSFORMERS, DataclassTransformer, JsonObj, NestedTransfomer, StringInitTransformer
-from config.transformer import LeafTransformer
-from util import Id
+from config.transformer import BaseTransformerRegistry, Transformer, TransformerRegistry
+from util.typing import JsonObj, TypeDescription
+from util.util import Id
 
 class DummyChild(TypedDict):
     a: int
@@ -18,7 +18,10 @@ class DummyParent(TypedDict):
     cho: Optional[DummyChild]
 
 
-class IPTransformer(LeafTransformer[IPv4Address | IPv6Address]):
+class IPTransformer(Transformer[IPv4Address | IPv6Address]):
+    def __init__(self, t: type[IPv4Address | IPv6Address]):
+        self.t = t
+
     def parse(self, json: JsonObj) -> IPv4Address | IPv6Address:
         assert isinstance(json, str)
         return self.t(json)
@@ -26,11 +29,15 @@ class IPTransformer(LeafTransformer[IPv4Address | IPv6Address]):
     def serialize(self, value: IPv4Address | IPv6Address) -> JsonObj:
         return str(value)
 
+    @classmethod
+    def create(cls, type_description: TypeDescription[IPv4Address | IPv6Address], transformer_registry: BaseTransformerRegistry) -> Transformer[IPv4Address | IPv6Address]:
+        return IPTransformer(type_description.base_type) # type: ignore
+    
+
 try:
-    trans = NestedTransfomer(
-        DummyParent,
-        [*ATOM_TRANSFORMERS, IPTransformer(IPv4Address)]
-    )
+    trans = TransformerRegistry()\
+        .register_transformer(IPv4Address, IPTransformer.create)\
+        .get_transformer(DummyParent)
 
     ser = trans.serialize({
         'ch': {
@@ -47,10 +54,10 @@ except ValueError as e:
     assert 'IPv6' in str(e)
 print("passed 1")
 
-trans = NestedTransfomer(
-    DummyParent,
-    [*ATOM_TRANSFORMERS, IPTransformer(IPv4Address), StringInitTransformer(IPv6Address)]
-)
+trans = TransformerRegistry()\
+    .register_transformer(IPv4Address, IPTransformer.create)\
+    .register_stringlike(IPv6Address)\
+    .get_transformer(DummyParent)
 
 ser = trans.serialize({
     'ch': {
@@ -117,7 +124,7 @@ print('passed 3')
 class LiteralContainer(TypedDict):
     xd: Literal['x', 'd']
 
-literal_transformer = NestedTransfomer(LiteralContainer, [*ATOM_TRANSFORMERS])
+literal_transformer = TransformerRegistry().get_transformer(LiteralContainer)
 
 result = json.dumps(literal_transformer.serialize({'xd': 'x'}))
 assert result == '{"xd": "x"}'
@@ -126,7 +133,10 @@ print('passed 4')
 class GenericContainer(TypedDict):
     id: Id[str]
 
-generic_transformer = NestedTransfomer(GenericContainer, [*ATOM_TRANSFORMERS, StringInitTransformer(Id)])
+generic_transformer = TransformerRegistry()\
+    .register_stringlike(IPv6Address)\
+    .register_stringlike(Id)\
+    .get_transformer(GenericContainer)
 result = json.dumps(generic_transformer.serialize({'id': Id('fsfsd')}))
 assert result == '{"id": "fsfsd"}'
 print('passed 5')
@@ -135,10 +145,9 @@ print('passed 5')
 @dataclass
 class Dog:
     bones: int
-dog_transformer = NestedTransfomer(Dog, [
-    *ATOM_TRANSFORMERS,
-    DataclassTransformer(Dog)
-])
+dog_transformer = TransformerRegistry()\
+    .register_dataclass(Dog)\
+    .get_transformer(Dog)
 result = json.dumps(dog_transformer.serialize(Dog(bones=4)))
 assert result == '{"bones": 4}'
 print('passed 6')

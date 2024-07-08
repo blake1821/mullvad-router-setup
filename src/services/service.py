@@ -1,8 +1,9 @@
 
 from typing import Optional
 
-from config.config_access import ConfigAccessor
-from util import bash, write_file
+from config.config_access import ConfigDAO
+from util.bash import bash
+from util.util import write_file
 
 class Service:
     apt_packages: list[str]
@@ -18,7 +19,7 @@ class Service:
         self.service_name = service_name
         self.config_path = config_path
     
-    def get_config_string(self, config: ConfigAccessor) -> str:
+    def get_config_string(self, config: ConfigDAO) -> str:
         raise NotImplementedError()
     
     def enable(self):
@@ -33,7 +34,7 @@ class Service:
         if self.service_name:
             bash(f'systemctl stop {self.service_name}')
     
-    def write_config_file(self, config: ConfigAccessor):
+    def write_config_file(self, config: ConfigDAO):
         if self.config_path:
             write_file(self.config_path, self.get_config_string(config)) 
 

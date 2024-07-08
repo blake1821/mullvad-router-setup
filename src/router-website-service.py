@@ -1,7 +1,7 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import time
 from config.config import ConfigManager
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from services.services import MULLVAD_SERVICE, MullvadReloadHandler
 from web.commands.programs import CommandRoutes
 from web.components.template import CenteredPanelTemplate, DefaultPageTemplate
@@ -15,7 +15,7 @@ def reload():
     MULLVAD_SERVICE.restart()
     time.sleep(1)
 
-config = ConfigAccessor(ConfigManager(), MullvadReloadHandler())
+config = ConfigDAO(ConfigManager(), MullvadReloadHandler())
 
 file_not_found_page = Page('File not found')
 

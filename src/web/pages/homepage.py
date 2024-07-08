@@ -1,9 +1,9 @@
 from data.mullvad import MullvadDevice
 from data.network import PortForward
 from data.vultr import VultrInstance
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from services.services import DHCP_SERVICE
-from util import bash_get
+from util.bash import bash_get
 from web.commands.program import Command
 from web.commands.programs import CommandRoutes
 from data.vpn import VPN
@@ -60,7 +60,7 @@ def render_delete_port_forward_button(port_fw: PortForward, command_routes: Comm
 
 # Tables
 
-def render_mullvad_devices_table(config: ConfigAccessor, command_routes: CommandRoutes):
+def render_mullvad_devices_table(config: ConfigDAO, command_routes: CommandRoutes):
     return render_html_table([
         [
             device.location.name,
@@ -71,7 +71,7 @@ def render_mullvad_devices_table(config: ConfigAccessor, command_routes: Command
     ])
 
 
-def render_vultr_instances_table(config: ConfigAccessor, command_routes: CommandRoutes):
+def render_vultr_instances_table(config: ConfigDAO, command_routes: CommandRoutes):
     return render_html_table([
         [
             str(host.ip),
@@ -98,7 +98,7 @@ def render_client_table() -> str:
         for client in DHCP_SERVICE.get_clients()
     ], headers=["MAC", "IP", "Hostname"])
 
-def render_port_fw_table(config: ConfigAccessor, command_routes: CommandRoutes) -> str:
+def render_port_fw_table(config: ConfigDAO, command_routes: CommandRoutes) -> str:
     return render_html_table([
         [
             str(port_fw.src_port),
@@ -112,7 +112,7 @@ def render_port_fw_table(config: ConfigAccessor, command_routes: CommandRoutes) 
 
 # Sections
 
-def render_vultr_section(config: ConfigAccessor, command_routes: CommandRoutes):
+def render_vultr_section(config: ConfigDAO, command_routes: CommandRoutes):
     if config.get_vultr_api_key() is not None:
         return f'''
             <div class="centered">

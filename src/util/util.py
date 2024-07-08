@@ -2,41 +2,11 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 import os
-import subprocess
 import random
 import string
 from typing import Generic, Self, TypeVar
 
-def bash_get(command: str):
-    try:
-        result = subprocess.run(
-            command,
-            shell=True,
-            executable='/bin/bash',
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        return result.stdout.strip()
-    except subprocess.CalledProcessError as e:
-        raise e
-
-
-def bash(command: str):
-    try:
-        subprocess.run(
-            command,
-            shell=True,
-            executable='/bin/bash',
-            check=True
-        )
-    except subprocess.CalledProcessError as e:
-        # Handle the exception if the command fails
-        print(f"Command failed with exit code {e.returncode}")
-        return False
-    return True
-
+# This file contains utility functions that don't warrant their own module
 
 def write_file(path: str, contents: str) -> None:
     with open(path, 'w') as file:
@@ -53,6 +23,8 @@ def get_vpn_home():
 def cookie_expiration_date():
     expiration_date = datetime.now() + timedelta(days=365)
     return expiration_date.strftime('%a, %d-%b-%Y %H:%M:%S GMT')
+
+# Identifiable and Describable classes
 
 T = TypeVar('T')
 class Id(Generic[T], str):
@@ -83,3 +55,4 @@ def create_id_map(items: list[I]) -> IdMap[I]:
         item.get_id(): item
         for item in items
     }
+

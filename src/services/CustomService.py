@@ -1,5 +1,5 @@
 from typing import Literal, Union
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from services.service import Service
 
 
@@ -24,7 +24,7 @@ class CustomService(Service):
         self.exec_path = exec_path
         self.restart_mode = restart_mode
     
-    def get_config_string(self, config: ConfigAccessor) -> str:
+    def get_config_string(self, config: ConfigDAO) -> str:
         return f'''\
 [Unit]
 Description={self.description}

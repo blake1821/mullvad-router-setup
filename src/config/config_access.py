@@ -4,17 +4,21 @@ from typing import Iterable, Literal, Optional
 from config.config import Config, ConfigManager, PortForwardCfg, VPNSelectionCfg, VultrInstanceCfg
 from data.mullvad import MullvadDevice
 from data.network import IfName, PortForward, PrivateKey
-from util import Id
+from util.util import Id
 from data.vultr import ApiKey, VultrInstance, VultrInstanceHost
 from data.vpn import VPN
 
 class ReloadHandler(ABC):
     @abstractmethod
     def reload(self, reload: Literal['reload']) -> None:
+        """Called whenever the config file is updated in a way that requires a service restart"""
+
         raise NotImplementedError()
     
 
-class ConfigAccessor:
+class ConfigDAO:
+    """Data Access Object for the config file"""
+
     def __init__(self, config_manager: ConfigManager, reload_handler: ReloadHandler):
         self._config_manager = config_manager
         self.reload_handler = reload_handler

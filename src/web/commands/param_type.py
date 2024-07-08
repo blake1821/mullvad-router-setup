@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Callable, Generic, Optional, TypeVar, cast
 
 from data.mullvad import MullvadDevice
-from config.config_access import ConfigAccessor
-from util import Describable, Id, IdMap, Identifiable
+from config.config_access import ConfigDAO
+from util.util import Describable, Id, IdMap, Identifiable
 from data.vpn import VPN
 
 T = TypeVar('T')
@@ -13,7 +13,7 @@ class ParamType(Generic[T], ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def parse_or_throw(self, value: str, config: ConfigAccessor) -> T:
+    def parse_or_throw(self, value: str, config: ConfigDAO) -> T:
         raise NotImplementedError()
 
     @abstractmethod
@@ -34,7 +34,7 @@ class TextParamType(ParamType[str]):
             <input type="text" name="{name}" required placeholder="{self.placeholder}">
         """
 
-    def parse_or_throw(self, value: str, config: ConfigAccessor) -> str:
+    def parse_or_throw(self, value: str, config: ConfigDAO) -> str:
         return value
 
     def serialize(self, value: str) -> str:
@@ -59,7 +59,7 @@ class IntParamType(ParamType[int]):
             <input type="number" step="1" name="{name}" required placeholder="{self.placeholder}">
         """
 
-    def parse_or_throw(self, value: str, config: ConfigAccessor) -> int:
+    def parse_or_throw(self, value: str, config: ConfigDAO) -> int:
         return int(value)
 
     def serialize(self, value: int) -> str:
@@ -80,7 +80,7 @@ class SelectParamType(ParamType[DI]):
             ]}</select>
         """
     
-    def parse_or_throw(self, value: str, config: ConfigAccessor) -> DI:
+    def parse_or_throw(self, value: str, config: ConfigDAO) -> DI:
         if value in self.id_map:
             return self.id_map[value]
         raise ValueError()
@@ -94,10 +94,10 @@ class IdentifiableParamType(ParamType[I]):
         raise RuntimeError("Cannot build HTML input for Identifiable Param")
     
     @abstractmethod
-    def _find(self, id: Id[I], config: ConfigAccessor) -> Optional[I]:
+    def _find(self, id: Id[I], config: ConfigDAO) -> Optional[I]:
         raise NotImplementedError()
     
-    def parse_or_throw(self, value: str, config: ConfigAccessor) -> I:
+    def parse_or_throw(self, value: str, config: ConfigDAO) -> I:
         item = self._find(Id(value), config)
         if not item:
             raise ValueError(f'No item found: {value}')
@@ -107,10 +107,10 @@ class IdentifiableParamType(ParamType[I]):
         return value.get_id()
 
 class BasicIdentifiableParamType(IdentifiableParamType[I]):
-    def __init__(self, lookup: Callable[[ConfigAccessor, Id[I]], Optional[I]]):
+    def __init__(self, lookup: Callable[[ConfigDAO, Id[I]], Optional[I]]):
         self.lookup = lookup
 
-    def _find(self, id: Id[I], config: ConfigAccessor) -> I | None:
+    def _find(self, id: Id[I], config: ConfigDAO) -> I | None:
         return self.lookup(config, id)
 
 MULLVAD_DEVICE_PARAM_TYPE = BasicIdentifiableParamType(lambda config, id: config.get_mullvad_device(id))
@@ -120,7 +120,7 @@ class VPNParamType(ParamType[Optional[VPN]]):
     def build_html_input(self, *, name: str) -> str:
         raise RuntimeError("Cannot build HTML input for VPN Param")
     
-    def parse_or_throw(self, value: str, config: ConfigAccessor) -> Optional[VPN]:
+    def parse_or_throw(self, value: str, config: ConfigDAO) -> Optional[VPN]:
         if value == 'none':
             return None
 

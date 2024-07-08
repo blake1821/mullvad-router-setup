@@ -4,7 +4,7 @@ from data.mullvad import MULLVAD_LOCATIONS, MullvadDevice
 from network.firewall import set_basic_v4_firewall
 from network.ip import remove_reroute, set_forwarding_enabled
 from services.services import  MULLVAD_SERVICE, PROXY_SERVICE
-from util import Id, get_random_string
+from util.util import Id, get_random_string
 from web.commands.param_type import SelectParamType, TextParamType
 from web.commands.program import Program
 from web.context import RequestContext

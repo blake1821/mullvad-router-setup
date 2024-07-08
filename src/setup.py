@@ -1,8 +1,9 @@
 from config.config import Config, ConfigManager, get_setup_config
 from data.network import IfName, PrivateKey
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from services.services import SERVICES, MullvadReloadHandler
-from util import bash, get_random_string
+from util.bash import bash
+from util.util import get_random_string
 
 print('''\
 VPN Router Setup
@@ -40,7 +41,7 @@ config_manager.save(Config({
     **setup_config
 }))
 
-config = ConfigAccessor(config_manager, MullvadReloadHandler() )
+config = ConfigDAO(config_manager, MullvadReloadHandler() )
 
 # Write the config files
 for service in SERVICES:

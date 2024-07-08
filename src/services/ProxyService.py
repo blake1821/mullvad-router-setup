@@ -1,4 +1,4 @@
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from services.service import Service
 
 
@@ -10,7 +10,7 @@ class ProxyService(Service):
             config_path='/etc/danted.conf'
         )
 
-    def get_config_string(self, config: ConfigAccessor) -> str:
+    def get_config_string(self, config: ConfigDAO) -> str:
         return f'''\
 logoutput: syslog
 user.privileged: root

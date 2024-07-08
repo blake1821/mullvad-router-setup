@@ -2,7 +2,7 @@ from ipaddress import IPv4Address
 from typing import Optional
 from data.network import PortForward
 from data.network import IfName
-from util import bash
+from util.bash import bash
 
 def forward_port(
     pf: PortForward,

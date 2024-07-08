@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from typing import Any, Generic, Literal, Optional, TypeVar, cast
 
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from web.commands.param_type import ParamType
 from web.context import RequestContext
 
@@ -70,7 +70,7 @@ class Command(Generic[P]):
             if param.name in self.args.__dict__
         }
     
-    def load_args(self, serialized: dict[str, str], config: ConfigAccessor):
+    def load_args(self, serialized: dict[str, str], config: ConfigDAO):
         for param in self.program.get_params():
             self.args.__dict__[param.name] = param.type.parse_or_throw(serialized[param.name], config)
     

@@ -4,17 +4,19 @@ from ipaddress import IPv4Address, IPv4Interface, IPv6Interface
 from typing import Self
 
 from data.network import PublicKey
-from util import Describable, Id, Identifiable, create_id_map
+from util.util import Describable, Id, Identifiable, create_id_map
 
 
 @dataclass
 class MullvadRelay:
+    """Mullvad wireguard peer"""
     ip: IPv4Address
     pubkey: PublicKey
 
 
 @dataclass
 class MullvadLocation(Describable):
+    """Mullvad server location"""
     id: Id[Self]
     name: str
     prefix: str
@@ -43,7 +45,7 @@ class MullvadDevice(Identifiable):
 
 MULLVAD_LOCATIONS = create_id_map([
     MullvadLocation(Id("anywhere"), "Anywhere", ''),
-    MullvadLocation(Id("us"), "US", '')
+    MullvadLocation(Id("us"), "US", 'us')
 ])
         
     

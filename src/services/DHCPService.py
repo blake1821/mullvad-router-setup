@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from ipaddress import IPv4Address
 from typing import Iterable
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from services.service import Service
 from network.ip import IPHelper
-from util import bash_get
+from util.bash import bash_get
 
 @dataclass
 class DHCPClient:
@@ -20,7 +20,7 @@ class DHCPService(Service):
             config_path='/etc/dhcp/dhcpd.conf'
         )
 
-    def get_config_string(self, config: ConfigAccessor) -> str:
+    def get_config_string(self, config: ConfigDAO) -> str:
         lan4 = IPHelper(ipv4_interface=config.lan_v4_interface)
         return f'''
 option domain-name-servers {config.dns};

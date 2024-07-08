@@ -1,5 +1,5 @@
 from ipaddress import IPv4Address
-from util import bash
+from util.bash import bash
 
 
 def is_tcp_port_open(address: IPv4Address, port: int):

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from ipaddress import IPv4Address
 from typing import NewType
 
-from util import bash_get
+from util.bash import bash_get
 
 @dataclass
 class PortForward:

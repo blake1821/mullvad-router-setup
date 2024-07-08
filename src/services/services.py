@@ -9,7 +9,7 @@ from services.NameService import NameService
 from services.ProxyService import ProxyService
 from services.RAService import RAService
 from services.service import Service
-from util import get_vpn_home
+from util.util import get_vpn_home
 
 vpn_home = get_vpn_home()
 

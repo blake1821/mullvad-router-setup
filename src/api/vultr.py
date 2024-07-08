@@ -4,7 +4,7 @@ import requests
 from data.vultr import VultrInstance, VultrLocation, VultrPlan
 from data.vultr import VultrOS
 from data.vultr import ApiKey
-from util import Id
+from util.util import Id
 
 class VultrInstanceResponse:
     def __init__(self,
@@ -27,6 +27,8 @@ def parse_fresh_vultr_instance(response: Any):
 
 
 class VultrAPI:
+    """Proxy for Vultr's API"""
+
     def __init__(self, api_key: ApiKey):
         self.api_key = api_key
     
@@ -50,7 +52,7 @@ class VultrAPI:
 
         return parse_fresh_vultr_instance(response)
     
-    def get_instance(self, id: str):
+    def get_instance(self, id: Id[VultrInstance]):
         response = requests.get(
             f'https://api.vultr.com/v2/instances/{id}',
             headers={
@@ -60,7 +62,7 @@ class VultrAPI:
 
         return parse_fresh_vultr_instance(response)
     
-    def destroy_instance(self, id: str):
+    def destroy_instance(self, id: Id[VultrInstance]):
         requests.delete(
             f'https://api.vultr.com/v2/instances/{id}',
             headers={

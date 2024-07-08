@@ -1,9 +1,9 @@
 from time import sleep
 from data.network import PrivateKey
 from data.vultr import VULTR_LOCATIONS, VULTR_PLANS, VultrInstance, VultrInstanceHost
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from network.nc import is_tcp_port_open
-from util import bash
+from util.bash import bash
 from api.vultr import VultrInstanceResponse, VultrAPI
 from data.vultr import VULTR_DEBIAN_12
 from web.commands.param_type import SelectParamType
@@ -12,7 +12,7 @@ from web.context import RequestContext
 import threading
 
 def load_vultr_instance(
-        config: ConfigAccessor,
+        config: ConfigDAO,
         vultr_api: VultrAPI,
         initial_instance: VultrInstanceResponse,
         instance_private_key: str):

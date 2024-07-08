@@ -1,4 +1,4 @@
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from services.service import Service
 from network.ip import IPHelper
 
@@ -10,7 +10,7 @@ class DHCPv6Service(Service):
             config_path='/etc/dhcp/dhcpd6.conf'
         )
 
-    def get_config_string(self, config: ConfigAccessor) -> str:
+    def get_config_string(self, config: ConfigDAO) -> str:
         lan6 = IPHelper(ipv6_interface=config.lan_v6_interface)
         return f'''
 default-lease-time 600;

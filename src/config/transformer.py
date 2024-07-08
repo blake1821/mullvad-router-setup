@@ -1,34 +1,18 @@
 from abc import ABC, abstractmethod
 from dataclasses import fields, is_dataclass
-from types import GenericAlias, NoneType
-from typing import Any, Generic, Literal, Optional, Protocol, TypeVar, TypedDict, Union, cast, get_type_hints
+from typing import Any, Generic, Literal, Optional, Protocol, TypeVar, TypedDict, cast, get_type_hints
 
+from util.typing import BaseType, ClassTypeDescription, JsonAtom, LiteralTypeDescription, TypeDescription, TypedDictDescription, get_type_description
+from util.typing import JsonObj
 
-
-JsonObj = int | str | bool | None.__class__ | dict[str, "JsonObj"] | list["JsonObj"]
-
+# Type Variables
 T = TypeVar('T')
-SerT = TypeVar('SerT')
 JT = TypeVar('JT', bound=int | str | bool | None.__class__)
 
 
-class IntermediateTransformer(ABC, Generic[SerT, T]):
-    def __init__(self, ser_t: type[SerT], t: type[T]):
-        self.ser_t = ser_t
-        self.t = t
+# Base classes
 
-    @abstractmethod
-    def parse(self, ser: SerT) -> T:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def serialize(self, value: T) -> SerT:
-        raise NotImplementedError()
-
-
-class LeafTransformer(ABC, Generic[T]):
-    def __init__(self, t: type[T]):
-        self.t = t
+class Transformer(ABC, Generic[T]):
 
     @abstractmethod
     def parse(self, json: JsonObj) -> T:
@@ -38,67 +22,116 @@ class LeafTransformer(ABC, Generic[T]):
     def serialize(self, value: T) -> JsonObj:
         raise NotImplementedError()
 
-Transformer = IntermediateTransformer[Any, T] | LeafTransformer[T]
+class BaseTransformerRegistry(ABC):
+    @abstractmethod
+    def get_transformer(self, t: type[T]) -> Transformer[T]:
+        raise NotImplementedError()
 
-class JsonAtomTransformer(LeafTransformer[JT]):
-    def parse(self, json: JsonObj) -> JT:
-        assert isinstance(json, self.t)
+class TransformerFactory(Protocol[T]):
+    """
+    A transformer that may be composed of other transformers.
+    Use the abstract factory method `create` to instantiate the transformer for varying types.
+    Often, the type arguments in the type description are used to determine the inner transformers.
+    """
+
+    def __call__(self, type_description: TypeDescription[T], transformer_registry: BaseTransformerRegistry) -> Transformer[T]:
+        raise NotImplementedError()
+
+# Atom transfomers
+
+class _JsonAtomTransformer(Transformer[JsonAtom]):
+    """Transformer for atomic types like int, str, bool, and None."""
+
+    def parse(self, json: JsonObj) -> JsonAtom:
+        assert isinstance(json, JsonAtom)
         return json
 
-    def serialize(self, value: JT) -> JsonObj:
+    def serialize(self, value: JsonAtom) -> JsonObj:
         return value
+    
+    @classmethod
+    def create(cls, type_description: TypeDescription[int | str | bool | None], transformer_registry: BaseTransformerRegistry) -> Transformer[JsonAtom]:
+        return _JsonAtomTransformer()
 
-class StringInit(Protocol):
-    def __init__(self, _x: str) -> None:
+"""A protocol for any class that can be constructed from its string representation, such as IPv4Address."""
+U = TypeVar('U', covariant=True)
+class StringInit(Protocol[U]):
+    def __call__(self, *args: *tuple[str]) -> U:
         ...
 
-SI = TypeVar('SI', bound=StringInit)
-class StringInitTransformer(LeafTransformer[SI]):
-    def parse(self, json: JsonObj) -> SI:
+class _StringInitTransformer(Transformer[T]): 
+    """Transforms a class with a string constructor to and from a string.
+    Note: This class doesn't perform adequate type checking. Use it carefully."""
+
+    def __init__(self, t: StringInit[T]):
+        self.t = t
+
+    def parse(self, json: JsonObj) -> T:
         assert isinstance(json, str)
         return self.t(json)
     
-    def serialize(self, value: SI) -> JsonObj:
+    def serialize(self, value: T) -> JsonObj:
         return str(value)
 
-ATOM_TRANSFORMERS : list[JsonAtomTransformer[Any]] = [
-    JsonAtomTransformer(int),
-    JsonAtomTransformer(str),
-    JsonAtomTransformer(bool),
-    JsonAtomTransformer(None.__class__)
-]
+    @classmethod
+    def create(cls, type_description: TypeDescription[T], transformer_registry: BaseTransformerRegistry) -> Transformer[T]:
+        assert isinstance(type_description, ClassTypeDescription)
+        base_type = cast(type[T], type_description.base_type)
+        return _StringInitTransformer(base_type)
 
-class ExampleTypedDict(TypedDict):
-    pass
-class ExampleGeneric(Generic[T]):
-    pass
-TYPED_DICT_META = type(ExampleTypedDict)
-UNION_META = type(Union[int, str])
-LITERAL_META = type(Literal['3'])
-GENERIC_META = type(ExampleGeneric[str])
+# Composite transformers
 
-class TypedDictTransformer(LeafTransformer[dict[str, Any]]):
+class _TypedDictTransformer(Transformer[T]):
+    """Transforms a TypedDict using its type annotations."""
+
     def __init__(self,
-                 attribute_transormers: dict[str, LeafTransformer[Any]]):
-        self.attribute_transformers = attribute_transormers
+                 typed_dict_type: type[T],
+                 transformer_registry: BaseTransformerRegistry):
+        self.attribute_transformers = {
+            k: transformer_registry.get_transformer(at)
+            for k, at in get_type_hints(typed_dict_type).items()
+        }
 
-    def parse(self, json: JsonObj) -> dict[str, Any]:
+    @classmethod
+    def create(cls, type_description: TypeDescription[T], transformer_registry: BaseTransformerRegistry) -> Transformer[T]:
+        assert isinstance(type_description, TypedDictDescription)
+        return _TypedDictTransformer(type_description.typed_dict_type, transformer_registry)
+    
+    @classmethod
+    def get_base_type(cls) -> BaseType:
+        return 'TypedDict'
+
+    def parse(self, json: JsonObj) -> T:
         assert isinstance(json, dict)
-        return {
+        return cast(T, {
             k: at.parse(json[k])
             for k, at in self.attribute_transformers.items()
-        }
+        })
     
-    def serialize(self, value: dict[str, Any]) -> JsonObj:
+    def serialize(self, value: T) -> JsonObj:
+        casted_value = cast(dict[str, Any], value)
         return {
-            k: at.serialize(value[k])
+            k: at.serialize(casted_value[k])
             for k, at in self.attribute_transformers.items()
         }
 
-class ListTransformer(LeafTransformer[list[T]]):
+
+class _ListTransformer(Transformer[list[T]]):
+    """Transforms a list[T] with an annotated value type"""
     def __init__(self,
-                 attribute_transormer: LeafTransformer[T]):
-        self.attribute_transformer = attribute_transormer
+                 attribute_transformer: Transformer[T]):
+        self.attribute_transformer = attribute_transformer
+
+    @classmethod
+    def create(cls, type_description: TypeDescription[list[T]], transformer_registry: BaseTransformerRegistry) -> Transformer[list[T]]:
+        assert isinstance(type_description, ClassTypeDescription)
+        return _ListTransformer(
+            transformer_registry.get_transformer(type_description.type_args[0])
+        )
+    
+    @classmethod
+    def get_base_type(cls) -> BaseType:
+        return list
 
     def parse(self, json: JsonObj) -> list[T]:
         assert isinstance(json, list)
@@ -113,10 +146,23 @@ class ListTransformer(LeafTransformer[list[T]]):
             for item in value
         ]
 
-class DictTransformer(LeafTransformer[dict[str, T]]):
+class _DictTransformer(Transformer[dict[str, T]]):
+    """Transforms a dict[str, T] with an annotated value type"""
+
     def __init__(self,
-                 attribute_transormer: LeafTransformer[T]):
+                 attribute_transormer: Transformer[T]):
         self.attribute_transformer = attribute_transormer
+    
+    @classmethod
+    def create(cls, type_description: TypeDescription[dict[str, T]], transformer_registry: BaseTransformerRegistry) -> Transformer[dict[str, T]]:
+        assert isinstance(type_description, ClassTypeDescription)
+        return _DictTransformer(
+            transformer_registry.get_transformer(type_description.type_args[1])
+        )
+    
+    @classmethod
+    def get_base_type(cls) -> BaseType:
+        return dict
 
     def parse(self, json: JsonObj) -> dict[str, T]:
         assert isinstance(json, dict)
@@ -131,10 +177,21 @@ class DictTransformer(LeafTransformer[dict[str, T]]):
             for k, v in value.items()
         }
 
-class OptionalTransformer(LeafTransformer[Optional[T]]):
+class _OptionalTransformer(Transformer[Optional[T]]):
+    """Transforms an Optional[...] value"""
+
     def __init__(self,
-                 attribute_transormer: LeafTransformer[T]):
+                 attribute_transormer: Transformer[T]):
         self.attribute_transformer = attribute_transormer
+
+    @classmethod
+    def create(cls, type_description: TypeDescription[Optional[T]], transformer_registry: BaseTransformerRegistry) -> Transformer[T | None]:
+        assert isinstance(type_description, ClassTypeDescription)
+        return _OptionalTransformer(transformer_registry.get_transformer(type_description.type_args[0]))
+    
+    @classmethod
+    def get_base_type(cls) -> Literal['Optional']:
+        return 'Optional'
 
     def parse(self, json: JsonObj) -> Optional[T]:
         if json is None:
@@ -146,22 +203,25 @@ class OptionalTransformer(LeafTransformer[Optional[T]]):
             return None
         return self.attribute_transformer.serialize(value)
 
-class CompositionalTransformer(Generic[SerT, T], LeafTransformer[T]):
-    def __init__(self,
-                 outer: IntermediateTransformer[SerT, T],
-                 inner: LeafTransformer[SerT]):
-        super().__init__(outer.t)
-        self.outer = outer
-        self.inner = inner
+class _LiteralTransformer(Transformer[JsonAtom]):
+    """Transforms a literal value"""
+
+    @classmethod
+    def create(cls, type_description: TypeDescription[Any], transformer_registry: BaseTransformerRegistry) -> Transformer[JsonAtom]:
+        assert isinstance(type_description, LiteralTypeDescription)
+        assert all(isinstance(arg, JsonAtom) for arg in type_description.literal_options)
+        return _JsonAtomTransformer()
     
-    def parse(self, json: JsonObj) -> T:
-        return self.outer.parse(self.inner.parse(json))
+    @classmethod
+    def get_base_type(cls) -> Literal['Literal']:
+        return 'Literal'
 
-    def serialize(self, value: T) -> JsonObj:
-        return self.inner.serialize(self.outer.serialize(value))
 
-class DataclassTransformer(IntermediateTransformer[Any, T]):
-    def __init__(self, t: type[T]):
+class _DataclassTransformer(Transformer[T]):
+    """Transforms between a dataclass and a TypedDict. You can use this when each attribute of the dataclass has a corresponding transformer"""
+
+    def __init__(self, t: type[T], transformer_registry: BaseTransformerRegistry):
+        self.t = t
         assert is_dataclass(t)
 
         self.datadict = TypedDict('datadict', {
@@ -169,23 +229,68 @@ class DataclassTransformer(IntermediateTransformer[Any, T]):
             for field in fields(t) # type: ignore
         })
 
-        super().__init__(self.datadict, t)
+        self.inner_transformer = transformer_registry.get_transformer(self.datadict)
     
-    def parse(self, ser: Any) -> T:
-        return self.t(**ser)
+    @classmethod
+    def create(cls, type_description: TypeDescription[T], transformer_registry: BaseTransformerRegistry) -> Transformer[T]:
+        assert isinstance(type_description, ClassTypeDescription)
+        dataclass_type = cast(type[T], type_description.base_type)
+        return _DataclassTransformer(dataclass_type, transformer_registry)
     
-    def serialize(self, value: T) -> Any:
-        return self.datadict({
+    def parse(self, json: JsonObj) -> T:
+        return self.t(**self.inner_transformer.parse(json))
+    
+    def serialize(self, value: T) -> JsonObj:
+        return self.inner_transformer.serialize(self.datadict({
             field.name: vars(value)[field.name]
             for field in fields(self.t) #type: ignore
-        }) # type: ignore
+        }))
+
+class TransformerRegistry(BaseTransformerRegistry):
+    def __init__(self) -> None:
+        # Base type -> Factory
+        self._transformer_factories: dict[BaseType, TransformerFactory[Any]] = {
+            **{
+                atomic_type: _JsonAtomTransformer.create
+                for atomic_type in [int, str, bool, None.__class__]
+            },
+            'TypedDict': _TypedDictTransformer[Any].create,
+            list: _ListTransformer[Any].create,
+            dict: _DictTransformer[Any].create,
+            'Optional': _OptionalTransformer[Any].create,
+            'Literal': _LiteralTransformer.create
+        }
+
+    def get_transformer(self, t: type[T]) -> Transformer[T]:
+        type_desc = get_type_description(t)
+        base_type = type_desc.base_type
+        if base_type in self._transformer_factories:
+            return self._transformer_factories[base_type](type_desc, self)
+        raise ValueError(f'No transformer found for type {t}')
+    
+    def register_stringlike(self, t: StringInit[T]):
+        """Add a transformer for a class that can be constructed from a string."""
+        t_type = cast(type[T], t)
+        self.register_transformer(t_type, _StringInitTransformer[Any].create)
+        return self
+    
+    def register_transformer(self, t: type[T], factory: TransformerFactory[T]):
+        """Add a transformer for a composite type."""
+        type_description = get_type_description(t)
+        self._transformer_factories[type_description.base_type] = factory
+        return self
+
+    def register_dataclass(self, t: type[T]):
+        """Add a transformer for a dataclass."""
+        self.register_transformer(t, _DataclassTransformer[Any].create)
+        return self
 
 
+# Might be useful later:
 
 # def CustomConfigObject(transformer: LeafTransformer[T]) -> type[T]:
 #     return cast(type[T], transformer)
 
-# Might be useful later
 # class Typed(TypedDict):
 #     type: str
 
@@ -202,64 +307,3 @@ class DataclassTransformer(IntermediateTransformer[Any, T]):
 #     id: Id[VultrInstance]
 
 # x = ConfigUnionType(('s', MullvadVPN), ('d', VultrVPN))
-
-class NestedTransfomer(LeafTransformer[T]):
-
-    def _get_transformer(self, t: type) -> LeafTransformer[Any]:
-        if t in self.type_transformer:
-            t_transformer = self.type_transformer[t]
-            if isinstance(t_transformer, LeafTransformer):
-                return t_transformer
-            else:
-                ser_t_transformer = self._get_transformer(t_transformer.ser_t)
-                return CompositionalTransformer(
-                    t_transformer,
-                    ser_t_transformer
-                )
-        elif type(t) == TYPED_DICT_META:
-            attribute_transformers = {
-                k: self._get_transformer(at)
-                for k, at in get_type_hints(t).items()
-            }
-            return TypedDictTransformer(attribute_transformers) # type: ignore
-        elif isinstance(t, GenericAlias):
-            if t.__origin__ == list:
-                return ListTransformer(self._get_transformer(t.__args__[0]))
-            elif t.__origin__ == dict:
-                assert isinstance(t.__args__[0](''), str)
-                return DictTransformer(self._get_transformer(t.__args__[1]))
-            else:
-                raise ValueError(f'Unknown Generic Alias {t}')
-        elif type(t) == GENERIC_META: 
-            origin_type: type = vars(t)['__origin__']
-            return self._get_transformer(origin_type)
-        elif type(t) == UNION_META:
-            args = cast(tuple[type, ...], t.__args__)  # type: ignore
-            # Test for optional
-            if len(args) == 2 and args[1] == NoneType:
-                return OptionalTransformer(self._get_transformer(args[0]))
-            else:
-                raise ValueError(f'Unions like {t} are not transformable. Try using a CustomConfigObject')
-        elif type(t) == LITERAL_META:
-            args = cast(tuple[type, ...], t.__args__)  # type: ignore
-            if all(isinstance(arg, str | int | None | bool) for arg in args):
-                return JsonAtomTransformer(str | int | None | bool)
-            raise ValueError(f'Literals like {t} are not transformable. Try using atomic literals.')
-        else:
-            raise ValueError(f'No transformer found for type {t}')
-
-    def __init__(self,
-                 t: type[T],
-                 transformers: list[Transformer[Any]]) -> None:
-        self.t = t
-        self.type_transformer = {
-            atomic_type.t: atomic_type
-            for atomic_type in transformers
-        }
-        self.transformer: LeafTransformer[T] = self._get_transformer(t)
-    
-    def parse(self, json: JsonObj) -> T:
-        return self.transformer.parse(json)
-    
-    def serialize(self, value: T) -> JsonObj:
-        return self.transformer.serialize(value)

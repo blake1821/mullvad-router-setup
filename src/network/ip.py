@@ -1,6 +1,7 @@
 from ipaddress import IPv4Address, IPv4Interface, IPv6Address, IPv6Interface
 from data.network import IfName
-from util import bash, bash_get
+from util.bash import bash_get
+from util.bash import bash
 
 def reset_wg_interface(wg: IfName):
     bash(f'ip link del {wg} 2>/dev/null')

@@ -1,4 +1,4 @@
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from services.service import Service
 
 class InterfacesService(Service):
@@ -9,7 +9,7 @@ class InterfacesService(Service):
             config_path='/etc/network/interfaces'
         )
 
-    def get_config_string(self, config: ConfigAccessor) -> str:
+    def get_config_string(self, config: ConfigDAO) -> str:
         return f'''\
 source /etc/network/interfaces.d/*
 

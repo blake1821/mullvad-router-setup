@@ -1,4 +1,4 @@
-from config.config_access import ConfigAccessor
+from config.config_access import ConfigDAO
 from services.service import Service
 
 
@@ -8,7 +8,7 @@ class NameService(Service):
             config_path='/etc/resolv.conf'
         )
 
-    def get_config_string(self, config: ConfigAccessor) -> str:
+    def get_config_string(self, config: ConfigDAO) -> str:
         return f'''
 nameserver {config.dns}
 nameserver {config.dns6}

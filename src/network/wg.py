@@ -1,7 +1,7 @@
 from ipaddress import IPv4Address
 from data.network import PrivateKey
 from data.network import PublicKey
-from util import bash
+from util.bash import bash
 
 
 def set_wg(*,
