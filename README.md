@@ -28,7 +28,9 @@ To get the VPN up and running:
 1. Visit the website the router exposes to the host via the MAN (host-only) interface. Its URL should just be the IP address of said interface. Log in with the password you created in the setup phase.
 2. Log into your Mullvad account, go to Devices, and in the Advanced section, add a new device with the public key shown on the router website.
 3. Copy the IPv4 and IPv6 to the router website form, then submit.
-![image](https://github.com/blake1821/mullvad-router-setup/assets/124000747/dbcb67d8-8b0e-4e5c-bf79-7aa559ccf579)
+![image](https://github.com/blake1821/mullvad-router-setup/assets/124000747/17ad1bdd-6018-4c63-9736-278049cba0da)
+4. Press the button next to the newly added device labeled "Set VPN".
+
 
 ## Use the SOCKS5 proxy
 I should make it clear that this utility isn't intended to route all your host's traffic through the VPN tunnel. To browse the web privately on the host, you need to configure your browser to use the proxy server. Connect using the MAN IP and port `1080`.
@@ -40,7 +42,7 @@ Simply attach downstream VMs to the same internal network.
 
 ## Configuring Port Forwarding
 On the router website, you can configure port forwarding from your host to one of the VMs in the internal network.
-![image](https://github.com/blake1821/mullvad-router-setup/assets/124000747/9612b79b-3781-4b2f-bd69-11f223468c6a)
+![image](https://github.com/blake1821/mullvad-router-setup/assets/124000747/67c5e43f-6c54-4b69-9cd0-dfc2ad583321)
 
 
 ```bash
