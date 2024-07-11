@@ -2,5 +2,13 @@
     "terminal.integrated.env.linux": {
         "PYTHONPATH": "${workspaceFolder}/src",
     },
-    "python.analysis.typeCheckingMode": "strict"
+    "python.analysis.typeCheckingMode": "strict",
+    "cmake.sourceDirectory": "${workspaceFolder}/traffic-monitor",
+    "cmake.buildDirectory": "${workspaceFolder}/traffic-monitor/cmake-build-files",
+    "files.associations": {
+        "types.h": "c",
+        "trafficmon_proto.h": "c",
+        "iplookup.h": "c"
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc",
 }

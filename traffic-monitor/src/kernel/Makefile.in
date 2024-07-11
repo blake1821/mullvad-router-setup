@@ -1,0 +1,4 @@
+CONFIG_MODULE_SIG=n
+
+obj-m += @mod_name@.o
+@mod_name@-objs += @module_objects@

@@ -1,0 +1,39 @@
+{
+    "configurations": [
+        {
+            "name": "Kernel Dev",
+            "includePath": [
+                "/usr/src/linux-headers-6.1.0-22-amd64/arch/x86/include/generated",
+                "/usr/src/linux-headers-6.1.0-22-amd64/include/",
+                "/usr/src/linux-headers-6.1.0-22-common/include/",
+                "/usr/src/linux-headers-6.1.0-22-common/include/uapi",
+                "/usr/src/linux-headers-6.1.0-22-common/arch/x86/include",
+                "/usr/src/linux-headers-6.1.0-22-common/arch/x86/include/uapi",
+                "/usr/src/linux-headers-6.1.0-22-common/arch/x86/include",
+                "/usr/src/linux-headers-6.1.0-22-amd64/arch/x86/include/generated/uapi",
+                "/usr/src/linux-headers-6.1.0-22-amd64/include/generated/uapi"
+            ],
+            "compilerArgs": [
+                "-nostdinc",
+                "-include",
+                "/usr/src/linux-headers-6.1.0-22-common/include/linux/kconfig.h",
+                "-include",
+                "/usr/src/linux-headers-6.1.0-22-common/include/linux/compiler_types.h"
+            ],
+            "defines": [
+                "__KERNEL__",
+                "MODULE"
+            ],
+            "cStandard": "c11",
+            "intelliSenseMode": "linux-gcc-x64"
+        },
+        {
+            "name": "User Space",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

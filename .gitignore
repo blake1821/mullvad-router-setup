@@ -1,3 +1,5 @@
 __pycache__
 config.json
 config.backup.json
+traffic-monitor/build
+traffic-monitor/cmake-build-files

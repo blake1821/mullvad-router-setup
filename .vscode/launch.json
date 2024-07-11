@@ -5,6 +5,13 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Insert Kernel Module",
+            "request": "launch",
+            "type": "node-terminal",
+            "preLaunchTask": "Load Kernel Module",
+            "command": "lsmod | grep trafficmon"
+        },
+        {
             "name": "Python Debugger: Current File",
             "type": "debugpy",
             "request": "launch",

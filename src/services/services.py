@@ -1,6 +1,7 @@
 import time
 from typing import Literal
 from config.config_access import ReloadHandler
+from services.BuildTools import BuildTools
 from services.CustomService import CustomService
 from services.DHCPService import DHCPService
 from services.DHCPv6Service import DHCPv6Service
@@ -33,6 +34,7 @@ SERVICES: list[Service] = [
     # Common utils
     Service(apt_packages=['wireguard', 'jq', 'curl', 'iptables', 'sshpass']),
 
+    BuildTools(),
     InterfacesService(),
     DHCP_SERVICE,
     DHCPv6Service(),
