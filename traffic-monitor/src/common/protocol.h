@@ -2,9 +2,12 @@
 
 #ifdef __KERNEL__
 #include <net/inet_common.h>
+#else
+#include<netinet/in.h>
 #endif
 
 #define TRAFFICMON_PROC_FILE "trafficmon"
+#define TEST_INTERFACE_PROC_FILE "test_interface"
 #define MAX_MESSAGE_SIZE 1024
 
 #define CONCAT(x, y) x##y
@@ -26,10 +29,10 @@ Messaging protocol:
     ENTRY(SetStatus4) \
     ENTRY(SetStatus6)
 
-enum IPStatus{
+typedef enum {
     Allowed,
     Blocked
-};
+} IPStatus;
 
 // read() messages
 struct Connect4Payload{
@@ -59,14 +62,31 @@ struct SetStatus6Payload{
     IPStatus status;
 };
 
-enum ReadMessageType{
+#define PAYLOAD_T(name) struct CONCAT(name, Payload)
+
+typedef enum {
     #define ENTRY(name) name,
     READ_MESSAGES
     #undef ENTRY
-};
+} ReadMessageType;
 
-enum WriteMessageType{
+typedef enum{
     #define ENTRY(name) name,
     WRITE_MESSAGES
     #undef ENTRY
+} WriteMessageType;
+
+struct ReadHeader {
+    ReadMessageType type;
+    uint32_t count;
 };
+
+struct WriteHeader {
+    WriteMessageType type;
+    uint32_t count;
+};
+
+#define MAX_PAYLOAD_COUNT(name) (MAX_MESSAGE_SIZE / sizeof(struct name##Payload))
+
+int get_read_payload_size(ReadMessageType type);
+int get_write_payload_size(WriteMessageType type);

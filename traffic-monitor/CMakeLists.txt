@@ -3,6 +3,7 @@ project(traffic-monitor VERSION 0.1.0 LANGUAGES C CXX)
 
 # Set common directories
 set(SRC_DIR "${CMAKE_SOURCE_DIR}/src")
+set(TEST_DIR "${CMAKE_SOURCE_DIR}/test")
 set(BUILD_DIR "${CMAKE_SOURCE_DIR}/build")
 set(KERNEL_DIR "${SRC_DIR}/kernel")
 set(USER_DIR "${SRC_DIR}/user")
@@ -31,16 +32,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BUILD_DIR})
 
 # Copy module source files for building
 # Prepare module object files list
-set(MODULE_OBJECTS "")
+set(module_objects "")
 foreach(src ${MODULE_SOURCE_FILES})
   file(RELATIVE_PATH rel_path ${SRC_DIR} ${src})
   configure_file(${src} kbuild-files/${rel_path} COPYONLY)
   if(src MATCHES "\\.c$")
     string(REPLACE ".c" ".o" object ${rel_path})
-    list(APPEND MODULE_OBJECTS ${object})
+    string(APPEND module_objects ${object} " ")
   endif()
 endforeach()
-string(REPLACE ";" " " module_objects ${MODULE_OBJECTS})
 
 # Configure the kernel module Makefile
 configure_file(${KERNEL_DIR}/Makefile.in "kbuild-files/Makefile" @ONLY)

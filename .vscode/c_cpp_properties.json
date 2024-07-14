@@ -18,13 +18,13 @@
                 "-include",
                 "/usr/src/linux-headers-6.1.0-22-common/include/linux/kconfig.h",
                 "-include",
-                "/usr/src/linux-headers-6.1.0-22-common/include/linux/compiler_types.h"
+                "/usr/src/linux-headers-6.1.0-22-common/include/linux/compiler_types.h",
             ],
             "defines": [
                 "__KERNEL__",
                 "MODULE"
             ],
-            "cStandard": "c11",
+            "cStandard": "c17",
             "intelliSenseMode": "linux-gcc-x64"
         },
         {
@@ -32,7 +32,12 @@
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c11",
             "cppStandard": "c++17",
-            "intelliSenseMode": "linux-gcc-x64"
+            "intelliSenseMode": "linux-gcc-x64",
+            "includePath": [
+                "/usr/include",
+                "/usr/lib/gcc/x86_64-linux-gnu/12/include",
+                "/usr/local/include"
+            ]
         }
     ],
     "version": 4

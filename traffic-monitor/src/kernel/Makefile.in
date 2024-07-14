@@ -1,4 +1,6 @@
 CONFIG_MODULE_SIG=n
 
+ccflags-y += -Wno-unused-variable -Wno-unused-result -Wno-discarded-qualifiers -Wno-unused-value
+
 obj-m += @mod_name@.o
 @mod_name@-objs += @module_objects@
