@@ -5,6 +5,7 @@ from services.BuildTools import BuildTools
 from services.CustomService import CustomService
 from services.DHCPService import DHCPService
 from services.DHCPv6Service import DHCPv6Service
+from services.Grub import Grub
 from services.InterfacesService import InterfacesService
 from services.NameService import NameService
 from services.ProxyService import ProxyService
@@ -34,6 +35,7 @@ SERVICES: list[Service] = [
     # Common utils
     Service(apt_packages=['wireguard', 'jq', 'curl', 'iptables', 'sshpass']),
 
+    Grub(),
     BuildTools(),
     InterfacesService(),
     DHCP_SERVICE,

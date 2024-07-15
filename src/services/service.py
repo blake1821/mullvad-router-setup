@@ -37,6 +37,19 @@ class Service:
     def write_config_file(self, config: ConfigDAO):
         if self.config_path:
             write_file(self.config_path, self.get_config_string(config)) 
+        self._post_config()
+    
+    def get_config_file_contents(self) -> str:
+        if self.config_path:
+            with open(self.config_path, 'r') as file:
+                return file.read()
+        else:
+            raise FileNotFoundError()
+    
+    def _post_config(self):
+        pass
+
+
 
 
         
