@@ -4,9 +4,8 @@ int main(int argc, char *argv[])
 {
 
     Trafficmon trafficmon;
-    deque<ReadMessage> read_messages;
-
-    deque<SetStatus4Payload> set_4_payloads;
+    queue<ReadMessage> read_messages;
+    queue<SetStatus4Payload> set_4_payloads;
 
     while (true)
     {
@@ -20,7 +19,7 @@ int main(int argc, char *argv[])
         while (!read_messages.empty())
         {
             auto message = read_messages.front();
-            read_messages.pop_front();
+            read_messages.pop();
 
             string response;
             bool allow;
@@ -49,7 +48,7 @@ int main(int argc, char *argv[])
                         .status = allow ? Allowed : Blocked
                     };
 
-                    set_4_payloads.push_back(response_payload);
+                    set_4_payloads.push(response_payload);
                     trafficmon.write_messages<SetStatus4>(set_4_payloads);
                     
                     break;

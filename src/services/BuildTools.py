@@ -11,5 +11,6 @@ class BuildTools(Service):
         super().__init__(apt_packages=[
             'build-essential',
             'cmake',
+            'gdb',
             f'linux-headers-{kernel_version}'
         ])

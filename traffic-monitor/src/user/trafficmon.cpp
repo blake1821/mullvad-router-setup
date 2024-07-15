@@ -23,10 +23,16 @@ Trafficmon::Trafficmon()
     }
 }
 
-void Trafficmon::read_messages(deque<ReadMessage> &messages)
+bool Trafficmon::read_messages(queue<ReadMessage> &messages)
 {
 
-    handle(read(fd, &read_header, sizeof(read_header)));
+    if(read(fd, &read_header, sizeof(read_header)) < 0){
+        if(errno == EINTR){
+            return true;
+        }else{
+            throw runtime_error("Failed to read header");
+        }
+    }
     payload_size = get_read_payload_size(read_header.type);
     handle(read(fd, temp_buffer, read_header.count * payload_size));
 
@@ -34,8 +40,10 @@ void Trafficmon::read_messages(deque<ReadMessage> &messages)
     {
         message.type = read_header.type;
         message.payload = *(ReadMessagePayload *)(temp_buffer + i * payload_size);
-        messages.push_back(message);
+        messages.push(message);
     }
+
+    return false;
 }
 
 Trafficmon::~Trafficmon()

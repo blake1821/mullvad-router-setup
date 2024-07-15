@@ -1,48 +1,32 @@
-#include <iostream>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-extern "C"
-{
-#include "../common/protocol.h"
-}
-#include <string.h>
+#include "testnet.h"
 
 using namespace std;
 
-class TestNet
+TestNet::TestNet()
 {
-private:
-    int fd;
+    char filename[128] = "/proc/";
+    strcat(filename, TEST_INTERFACE_PROC_FILE);
 
-public:
-    TestNet()
+    fd = open(filename, O_WRONLY);
+    if (fd == -1)
     {
-        char filename[128] = "/proc/";
-        strcat(filename, TEST_INTERFACE_PROC_FILE);
-
-        fd = open(filename, O_WRONLY);
-        if (fd == -1)
-        {
-            cerr << "Failed to open file" << endl;
-            exit(1);
-        }
+        cerr << "Failed to open file" << endl;
+        exit(1);
     }
+}
 
-    ~TestNet()
+TestNet::~TestNet()
+{
+    close(fd);
+}
+
+IPStatus TestNet::write_ip(struct in_addr &addr)
+{
+    IPStatus bytes_written = (IPStatus)write(fd, &addr, sizeof(addr));
+    if (bytes_written == -1)
     {
-        close(fd);
+        cerr << "Failed to write to test interface file" << endl;
+        exit(1);
     }
-
-    IPStatus write_ip(struct in_addr &addr)
-    {
-        IPStatus bytes_written = (IPStatus)write(fd, &addr, sizeof(addr));
-        if (bytes_written == -1)
-        {
-            cerr << "Failed to write to test interface file" << endl;
-            exit(1);
-        }
-        return bytes_written;
-    }
-};
+    return bytes_written;
+}

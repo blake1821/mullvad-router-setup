@@ -10,7 +10,7 @@ extern "C"
 }
 #include <string.h>
 #include <vector>
-#include <deque>
+#include <queue>
 #include <type_traits>
 #include <cassert>
 
@@ -62,22 +62,24 @@ private:
 
 public:
     Trafficmon();
-    void read_messages(deque<ReadMessage> &messages);
+    bool read_messages(queue<ReadMessage> &messages);
     template <WriteMessageType T>
-    void write_messages(deque<typename Props<T>::Payload> &messages)
+    void write_messages(queue<typename Props<T>::Payload> &messages)
     {
+        int count;
         write_header.type = T;
-        int count = min(MAX_MESSAGE_SIZE / sizeof(typename Props<T>::Payload), messages.size());
-        write_header.count = count;
+        while((count=min(MAX_MESSAGE_SIZE / sizeof(typename Props<T>::Payload), messages.size()))){
+            write_header.count = count;
 
-        for (int i = 0; i < count; i++)
-        {
-            ((typename Props<T>::Payload *)temp_buffer)[i] = messages.front();
-            messages.pop_front();
+            for (int i = 0; i < count; i++)
+            {
+                ((typename Props<T>::Payload *)temp_buffer)[i] = messages.front();
+                messages.pop();
+            }
+
+            handle(write(fd, &write_header, sizeof(write_header)));
+            handle(write(fd, temp_buffer, count * sizeof(typename Props<T>::Payload)));
         }
-
-        handle(write(fd, &write_header, sizeof(write_header)));
-        handle(write(fd, temp_buffer, count * sizeof(typename Props<T>::Payload)));
     }
 
     ~Trafficmon();

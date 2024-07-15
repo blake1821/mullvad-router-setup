@@ -20,7 +20,7 @@ static ssize_t custom_write(struct file *file, __user const char *buffer, size_t
     case Header:
         if (size != sizeof(struct WriteHeader))
         {
-            return -1;
+            return -EINVAL;
         }
         copy_from_user(&write_header, buffer, size);
         write_state = Payload;
@@ -30,7 +30,7 @@ static ssize_t custom_write(struct file *file, __user const char *buffer, size_t
             size != write_header.count * get_write_payload_size(write_header.type) ||
             size > MAX_MESSAGE_SIZE)
         {
-            return -1;
+            return -EINVAL;
         }
         copy_from_user(write_payloads, buffer, size);
         write_state = Header;
@@ -45,7 +45,7 @@ static ssize_t custom_write(struct file *file, __user const char *buffer, size_t
         }
         return size;
     }
-    return -1;
+    return -EINVAL;
 }
 
 MessageState read_state = Header;
@@ -60,10 +60,10 @@ static ssize_t custom_read(struct file * file, char * buffer, size_t size, loff_
     case Header:
         if (size != sizeof(struct ReadHeader))
         {
-            return -1;
+            return -EINVAL;
         }
         if(create_read_message())
-            return -1;
+            return -EINTR;
         copy_to_user(buffer, &read_header, size);
         read_state = Payload;
         return size;
@@ -72,13 +72,13 @@ static ssize_t custom_read(struct file * file, char * buffer, size_t size, loff_
             size != read_header.count * get_read_payload_size(read_header.type) ||
             size > MAX_MESSAGE_SIZE)
         {
-            return -1;
+            return -EINVAL;
         }
         copy_to_user(buffer, read_payload, size);
         read_state = Header;
         return size;
     }
-    return -1;
+    return -EINVAL;
 }
 
 static int custom_release(struct inode *, struct file *){
