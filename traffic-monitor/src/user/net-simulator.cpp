@@ -3,7 +3,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include "../common/protocol.h"
+extern "C" {
+    #include "../common/protocol.h"
+}
 #include <string.h>
 
 using namespace std;
@@ -32,11 +34,17 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    ssize_t bytes_written = write(fd, &addr, sizeof(addr));
+    IPStatus bytes_written = (IPStatus) write(fd, &addr, sizeof(addr));
     if (bytes_written == -1) {
         cerr << "Failed to write to file" << endl;
         close(fd);
         return 1;
+    }
+
+    if(bytes_written == Allowed){
+        cout << "Allowed" << endl;
+    } else {
+        cout << "Blocked" << endl;
     }
 
     close(fd);

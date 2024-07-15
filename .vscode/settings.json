@@ -6,10 +6,13 @@
     "cmake.sourceDirectory": "${workspaceFolder}/traffic-monitor",
     "cmake.buildDirectory": "${workspaceFolder}/traffic-monitor/cmake-build-files",
     "files.associations": {
+        "*.h": "c",
         "types.h": "c",
         "trafficmon_proto.h": "c",
         "iplookup.h": "c",
-        "protocol.h": "c"
+        "protocol.h": "c",
+        "vector": "cpp",
+        "typeinfo": "cpp"
     },
     "C_Cpp.default.compilerPath": "/usr/bin/gcc",
     "C_Cpp.errorSquiggles": "enabled",

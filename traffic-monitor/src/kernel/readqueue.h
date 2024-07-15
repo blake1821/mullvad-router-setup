@@ -13,7 +13,7 @@ extern struct ReadHeader read_header;
 extern char read_payload[MAX_MESSAGE_SIZE];
 
 // (Blockingly) Set the Read Message state variables by reading queues
-void create_read_message(void);
+bool create_read_message(void);
 
 // define enqueue functions
 #define ENTRY(name) void enqueue_##name(PAYLOAD_T(name));

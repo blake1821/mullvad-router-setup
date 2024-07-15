@@ -62,7 +62,8 @@ static ssize_t custom_read(struct file * file, char * buffer, size_t size, loff_
         {
             return -1;
         }
-        create_read_message();
+        if(create_read_message())
+            return -1;
         copy_to_user(buffer, &read_header, size);
         read_state = Payload;
         return size;
@@ -80,11 +81,16 @@ static ssize_t custom_read(struct file * file, char * buffer, size_t size, loff_
     return -1;
 }
 
+static int custom_release(struct inode *, struct file *){
+    return 0;
+}
+
+
 // proc file operations
 static const struct proc_ops custom_fops = {
     .proc_open = nonseekable_open,
     .proc_read = custom_read,
-    .proc_release = single_release,
+    .proc_release = custom_release,
     .proc_write = custom_write};
 
 void init_procfile(void)

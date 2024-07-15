@@ -1,6 +1,5 @@
 #ifdef __KERNEL__
 #include <linux/hashtable.h>
-#include <kunit/test-bug.h>
 #endif
 
 #include "iplookup.h"
@@ -69,6 +68,7 @@ void set_ipv4_status(struct SetStatus4Payload *payloads, int n){
                 status_frame = &ipv4_status_queue[entry->status_index];
                 status_frame->status = payload.status;
                 status_frame->used = 1;
+                mutex_unlock(&ip4_lock);
                 return;
             }
         }
