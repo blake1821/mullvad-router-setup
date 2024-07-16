@@ -31,8 +31,13 @@ enum class TestMode{
 
 Barrier finished_barrier(2);
 bool done = false;
-void signal_handler(int){
+void graceful_signal_handler(int signo){
     done = true;
+}
+
+void exit_thread(int signo){
+    finished_barrier.wait();
+    pthread_exit(NULL);
 }
 
 
@@ -51,8 +56,9 @@ private:
         queue<SetStatus4Payload> write_messages;
 
         while(true){
-            if(done || trafficmon.read_messages(read_messages))
-                break;
+            signal(SIGINT, graceful_signal_handler);
+            trafficmon.read_messages(read_messages);
+
             while(!read_messages.empty()){
                 auto msg = read_messages.front();
                 read_messages.pop();
@@ -73,8 +79,13 @@ private:
             }
 
             trafficmon.write_messages<WriteMessageType::SetStatus4>(write_messages);
+
+            signal(SIGINT, exit_thread);
+            if(done){
+                exit_thread(SIGINT);
+            }
+
         }
-        finished_barrier.wait();
     }
 
     inline void test_ip(struct in_addr ipv4){
@@ -96,8 +107,8 @@ public:
 
     /** Run the tests. Return the # of cache misses  */
     int run(TestMode test_mode, int num_rounds){
+        signal(SIGINT, exit_thread);
         done = false;
-        signal(SIGINT, signal_handler);
         thread filter_thread = thread(&TestSession::run_filter, this);
 
         if(test_mode == TestMode::RoundRobin){
