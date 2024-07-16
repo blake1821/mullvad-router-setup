@@ -1,4 +1,4 @@
-#include "../common/protocol.h"
+#include "protocol.h"
 
 // Defined in iplookup.c:
 

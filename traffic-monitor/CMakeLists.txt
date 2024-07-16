@@ -22,7 +22,7 @@ endif()
 message(STATUS "Kernel makefile: ${kernel_makefile}")
 
 # User executables
-set(USER_EXECUTABLES "${USER_DIR}/filter.cpp" "${USER_DIR}/net-simulator.cpp" "${USER_DIR}/test.cpp")
+set(USER_EXECUTABLES "${USER_DIR}/filter.cpp" "${USER_DIR}/test/net-simulator.cpp" "${USER_DIR}/test/test.cpp")
 
 # Find source files
 file(GLOB_RECURSE USER_SOURCE_FILES "${USER_DIR}/*.cpp" "${USER_DIR}/*.h" "${COMMON_DIR}/*.c" "${COMMON_DIR}/*.h")

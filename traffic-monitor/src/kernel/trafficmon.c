@@ -6,7 +6,7 @@
 #include <linux/proc_fs.h> // Module metadata
 
 #include "../common/protocol.h"
-#include "iplookup.h"
+#include "../common/iplookup.h"
 #include "readqueue.h"
 #include "test_interface.h"
 #include "procfile.h"

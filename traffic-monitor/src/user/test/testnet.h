@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -5,7 +6,7 @@
 #include <arpa/inet.h>
 extern "C"
 {
-#include "../common/protocol.h"
+#include "../../common/protocol.h"
 }
 #include <string.h>
 
