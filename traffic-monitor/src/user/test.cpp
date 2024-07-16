@@ -140,6 +140,9 @@ public:
 
 int main(){
     srand(time(NULL));
+
+    auto start_time = chrono::system_clock::now();
+
     TestSession test_session(10);
     cout << "1k Runs. Cache misses: " << test_session.run(TestMode::Random, 1000) << endl;
     cout << "(We expect this to be exactly 10)" << endl;
@@ -155,6 +158,12 @@ int main(){
     TestSession test_session4(1000);
     cout << "1M Runs. Cache misses: " << test_session4.run(TestMode::RoundRobin, 1000000) << endl;
     cout << "(We expect this to be 1000)" << endl;
+
+    auto end_time = chrono::system_clock::now();
+    auto ellapsed_time = chrono::duration_cast<chrono::milliseconds>(end_time - start_time).count();
+    cout << "Finished in " << ellapsed_time << "ms" << endl;
+
+    // before optimization: Takes roughly 1800ms (Big variance)
     
     return 0;
     
