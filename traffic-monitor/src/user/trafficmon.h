@@ -46,7 +46,7 @@ struct Props;
         using Payload = PAYLOAD_T(name); \
     };
 WRITE_MESSAGES
-#undef entry
+#undef ENTRY
 
 class Trafficmon
 {

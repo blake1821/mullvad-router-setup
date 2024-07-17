@@ -1,16 +1,18 @@
+#include "iplookup.h"
+#include "debug.h"
+
+// we don't need these right now
+#undef DEBUG_ENTER
+#undef DEBUG_EXIT
+
 #ifdef __KERNEL__
 #else
-#define mutex_lock(x) 
-#define mutex_unlock(x) 
-#define printk(...)
-#define NULL 0
+#define mutex_lock(x)
+#define mutex_unlock(x)
+#define KERN_ERR ""
+#define printk(x...) printf(x)
 #define DEFINE_MUTEX(x)
-#define bool char
-#define true 1
-#define false 0
 #endif
-
-#include "iplookup.h"
 
 DEFINE_MUTEX(ip4_lock);
 
@@ -31,7 +33,7 @@ struct StatusFrame4
 #define H_MASK ((1 << H_BITS) - 1)
 #define H2_MASK (((1 << 15) - 1) & ~Q_MASK)
 #define ENTRY_MASK (((1 << 16) - 1) & ~Q_MASK)
-#define TOMBSTONE_THRESHOLD (1 << (H_BITS - 1))
+#define TOMBSTONE_THRESHOLD (1 << (H_BITS - 2))
 
 /*
  * Hash Table Entry Structure:
@@ -73,7 +75,7 @@ struct ipv4_lookup_data
     l.slot = l.hash;                                                                              \
     while (*(l.entry = &ipv4_hash_table[l.slot]) != EMPTY)                                        \
     {                                                                                             \
-        if ((*l.entry & ENTRY_MASK) == l.h2 &&                                                      \
+        if ((*l.entry & ENTRY_MASK) == l.h2 &&                                                    \
             (l.status_frame = &ipv4_status_queue[(*l.entry) & Q_MASK])->ipv4.s_addr == ip.s_addr) \
         {                                                                                         \
             on_found break;                                                                       \
@@ -85,32 +87,30 @@ struct ipv4_lookup_data
 void ipv4_clean_up_tombstones(void)
 {
 
-    for (int i = 0; i <= H_MASK; i++)
+    memset(ipv4_hash_table, 0xFF, sizeof(ipv4_hash_table));
+
+    struct in_addr ip;
+    int16_t slot;
+
+    for (int q_index = 0; q_index != (1 << Q_BITS); q_index++)
     {
-        ipv4_hash_table[i] = EMPTY;
-    }
-
-    ipv4_tombstone_count = 0;
-
-    struct ipv4_lookup_data d;
-
-    for (int i = 0; i <= Q_MASK; i++)
-    {
-        if (ipv4_status_queue[i].slot > EMPTY)
+        if (ipv4_status_queue[q_index].slot > EMPTY)
         {
-            find_ipv4_status(d, ipv4_status_queue[i].ipv4, {
-                printk(KERN_ERR "Shouldn't have found a status frame.\n");
-                return;
-            });
-            *d.entry = d.h2 | i;
-            ipv4_status_queue[i].slot = d.slot;
+            ip = ipv4_status_queue[q_index].ipv4;
+            slot = IPV4_HASH(ip);
+            while (ipv4_hash_table[slot] != EMPTY)
+            {
+                slot++;
+                slot &= H_MASK;
+            }
+            ipv4_hash_table[slot] = IPV4_H2(ip) | q_index;
+            ipv4_status_queue[q_index].slot = slot;
         }
     }
 }
 
 void set_ipv4_status(struct SetStatus4Payload *payloads, int n)
 {
-
     mutex_lock(&ip4_lock);
 
     for (int i = 0; i < n; i++)
@@ -132,7 +132,7 @@ void set_ipv4_status(struct SetStatus4Payload *payloads, int n)
         while (l.status_frame = &ipv4_status_queue[ipv4_status_queue_index],
                l.status_frame->used && l.status_frame->slot > EMPTY)
         {
-            ipv4_status_queue[ipv4_status_queue_index].used = 0;
+            l.status_frame->used = 0;
             ipv4_status_queue_index++;
             ipv4_status_queue_index &= Q_MASK;
         }
@@ -156,7 +156,7 @@ void set_ipv4_status(struct SetStatus4Payload *payloads, int n)
 
         // increment the status queue index
         ipv4_status_queue_index++;
-        ipv4_status_queue_index &= 1023;
+        ipv4_status_queue_index &= Q_MASK;
 
     outer:
     }
