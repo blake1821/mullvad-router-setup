@@ -1,120 +1,60 @@
 #include "readqueue.h"
 #include "debug.h"
+#include <linux/circ_buf.h>
 
-DEFINE_MUTEX(read_queue_lock);
-DECLARE_WAIT_QUEUE_HEAD(read_wait_queue);
+#define BUFFER_SIZE (1 << 8)
+#define BUFFER_MASK (BUFFER_SIZE - 1)
 
-#define NODE_T(name) struct CONCAT(name, Node)
-#define HEAD(name) CONCAT(name, _head)
-
-// define a queue for each message type
-#define ENTRY(name)          \
-    NODE_T(name)             \
-    {                        \
-        PAYLOAD_T(name)      \
-        payload;             \
-        NODE_T(name) * next; \
-    };                       \
-    NODE_T(name) * HEAD(name) = NULL;
-
-READ_MESSAGES
-#undef ENTRY
-
-// move all queued messages into the buffer and return the count
-#define ENTRY(name)                                                         \
-    int dequeue_##name(void)                                                \
-    {                                                                       \
-        int count = 0;                                                      \
-        my_debug("Dequeueing items from %s \n", #name);                     \
-        NODE_T(name) * temp;                                                \
-        while (HEAD(name) != NULL && count < MAX_PAYLOAD_COUNT(name))       \
-        {                                                                   \
-            ((PAYLOAD_T(name) *)read_payload)[count] = HEAD(name)->payload; \
-            temp = HEAD(name)->next;                                        \
-            kfree(HEAD(name));                                              \
-            HEAD(name) = temp;                                              \
-            count++;                                                        \
-        }                                                                   \
-        my_debug("Dequeued %d items from %s \n", count, #name);             \
-        return count;                                                       \
+#define ENTRY(name)                                                                                           \
+    PAYLOAD_T(name)                                                                                           \
+    buffer_##name[BUFFER_SIZE];                                                                               \
+    DECLARE_WAIT_QUEUE_HEAD(wait_queue_##name);                                                               \
+    long buffer_head_##name = 0;                                                                              \
+    long buffer_tail_##name = 0;                                                                              \
+    void enqueue_##name(PAYLOAD_T(name) * payload)                                                            \
+    {                                                                                                         \
+        /* Normally this implementation would result in problems, but the constraints                         \
+         * of this project make it safe to assume that the buffer will never be full. */                      \
+        buffer_##name[buffer_head_##name] = *payload;                                                         \
+        spin_lock(&wait_queue_##name.lock);                                                                   \
+        smp_wmb();                                                                                            \
+        buffer_head_##name = (buffer_head_##name + 1) & BUFFER_MASK;                                          \
+        wake_up_locked(&wait_queue_##name);                                                                   \
+        spin_unlock(&wait_queue_##name.lock);                                                                 \
+    }                                                                                                         \
+                                                                                                              \
+    ssize_t read_##name(struct file *file, char *buffer, size_t size, loff_t *offset)                         \
+    {                                                                                                         \
+        spin_lock(&wait_queue_##name.lock);                                                                   \
+        if (buffer_head_##name == buffer_tail_##name)                                                         \
+        {                                                                                                     \
+            if (wait_event_interruptible_locked(wait_queue_##name, buffer_head_##name != buffer_tail_##name)) \
+            {                                                                                                 \
+                spin_unlock(&wait_queue_##name.lock);                                                         \
+                return -EINTR;                                                                                \
+            }                                                                                                 \
+        }                                                                                                     \
+        int initial_tail = buffer_tail_##name;                                                                \
+        int payload_count = min((int)MAX_PAYLOAD_COUNT(name),                                                 \
+                                (int)CIRC_CNT(buffer_head_##name, buffer_tail_##name, BUFFER_SIZE));          \
+        buffer_tail_##name = (buffer_tail_##name + payload_count) & BUFFER_MASK;                              \
+        spin_unlock(&wait_queue_##name.lock);                                                                 \
+                                                                                                              \
+        int message_size = payload_count * sizeof(PAYLOAD_T(name));                                           \
+                                                                                                              \
+        if (initial_tail > buffer_tail_##name)                                                                \
+        {                                                                                                     \
+            int round_1_size = (BUFFER_SIZE - initial_tail) * sizeof(PAYLOAD_T(name));                        \
+            copy_to_user(buffer, &buffer_##name[initial_tail], round_1_size);                                 \
+            buffer += round_1_size;                                                                           \
+            message_size -= round_1_size;                                                                     \
+            initial_tail = 0;                                                                                 \
+        }                                                                                                     \
+        copy_to_user(buffer, &buffer_##name[initial_tail], message_size);                                     \
+        return payload_count;                                                                                 \
     }
 READ_MESSAGES
 #undef ENTRY
-
-// an array of function pointers to the dequeue functions
-// note that the order of the functions must match the order of the messages
-int (*dequeue_functions[])(void) = {
-#define ENTRY(name) dequeue_##name,
-    READ_MESSAGES
-#undef ENTRY
-};
-const int dequeue_functions_count = sizeof(dequeue_functions) / sizeof(dequeue_functions[0]);
-
-bool message_enqueued = false;
-
-// add a message to the queue and wake up the reader
-#define ENTRY(name)                                                     \
-    void enqueue_##name(PAYLOAD_T(name) payload)                        \
-    {                                                                   \
-        my_debug("Enqueueing %s\n", #name);                             \
-        NODE_T(name) *node = kmalloc(sizeof(NODE_T(name)), GFP_KERNEL); \
-        node->payload = payload;                                        \
-        mutex_lock(&read_queue_lock);                                   \
-        node->next = HEAD(name);                                        \
-        HEAD(name) = node;                                              \
-        message_enqueued = true;                                        \
-        spin_lock(&read_wait_queue.lock);                               \
-        mutex_unlock(&read_queue_lock);                                 \
-        wake_up_locked(&read_wait_queue);                               \
-        spin_unlock(&read_wait_queue.lock);                             \
-        my_debug("Enqueued %s\n", #name);                               \
-    }
-READ_MESSAGES
-#undef ENTRY
-
-ReadMessageType next_type = 0;
-
-/**
- * In a round-robin fashion, create a read message from a queue.
- * If no message is available, block until one is enqueued.
- * Returns true if the process was interrupted.
- */
-bool create_read_message(void)
-{
-    bool created = false;
-    bool interrupted = false;
-    my_debug("Creating read message\n");
-    mutex_lock(&read_queue_lock);
-    while (!created && !interrupted)
-    {
-        int i;
-        for (i = 0; i < dequeue_functions_count && !created; i++)
-        {
-            int count;
-            if ((count = dequeue_functions[next_type]()))
-            {
-                read_header.count = count;
-                read_header.type = next_type;
-                created = true;
-            }
-            next_type++;
-            if (next_type == dequeue_functions_count)
-                next_type = 0;
-        }
-        if (!created)
-        {
-            message_enqueued = false;
-            my_debug("No messages available, waiting\n");
-            spin_lock(&read_wait_queue.lock);
-            mutex_unlock(&read_queue_lock);
-            interrupted = wait_event_interruptible_locked(read_wait_queue, message_enqueued);
-            spin_unlock(&read_wait_queue.lock);
-        }
-    }
-    mutex_unlock(&read_queue_lock);
-    my_debug("Created read message\n");
-    return interrupted;
-}
 
 void init_read_queue(void)
 {
@@ -123,10 +63,5 @@ void init_read_queue(void)
 
 void exit_read_queue(void)
 {
-    for (int i = 0; i < dequeue_functions_count; i++)
-    {
-        // deallocate all remaining nodes
-        while (dequeue_functions[i]())
-            ;
-    }
+    // nothing to do yet
 }

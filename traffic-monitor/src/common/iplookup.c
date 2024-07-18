@@ -196,7 +196,6 @@ IPStatus get_ipv4_status(struct in_addr ipv4)
 
     // if no status frame is allocated, look it up
     struct SetStatus4Payload payload = query_ipv4(ipv4);
-    set_ipv4_status(&payload, 1);
     return payload.status;
 }
 

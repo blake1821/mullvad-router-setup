@@ -9,6 +9,7 @@ void __payloads_exist_check(void)
 #undef ENTRY
 }
 
+/*
 int get_read_payload_size(ReadMessageType type)
 {
     switch (type)
@@ -34,3 +35,4 @@ int get_write_payload_size(WriteMessageType type)
     }
     return -1;
 }
+*/

@@ -4,58 +4,38 @@ int main(int argc, char *argv[])
 {
 
     Trafficmon trafficmon;
-    queue<ReadMessage> read_messages;
-    queue<SetStatus4Payload> set_4_payloads;
+    Query4Payload query_payloads[ReadProps<Query4>::MaxPayloadCount];
+    vector<SetStatus4Payload> set_4_payloads;
 
     while (true)
     {
 
         cout << "Reading a message..." << endl;
         
-        trafficmon.read_messages(read_messages);
-        assert(read_messages.size());
+        int count = trafficmon.read_messages<Query4>(query_payloads);
+        assert(count);
 
 
-        while (!read_messages.empty())
-        {
-            auto message = read_messages.front();
-            read_messages.pop();
+        for(int i = 0; i < count; i++){
+            Query4Payload &payload = query_payloads[i];
+            char ip_addr_str[128];
+            inet_ntop(AF_INET, &payload.ipv4, ip_addr_str, 128);
+            cout << "New request for: " << ip_addr_str << endl;
+            cout << "Allow? (Y/n) ";
 
             string response;
-            bool allow;
-            char ip_addr_str[128];
-            SetStatus4Payload response_payload;
-            Query4Payload &payload = message.payload.Query4;
+            cin >> response;
+            
+            bool allow = response.size() > 0 && (response[0] == 'Y' || response[0] == 'y');
 
-            switch(message.type){
-                case ReadMessageType::Connect4:
-                    throw runtime_error("I didn't put this in yet");
-                    break;
-                case ReadMessageType::Connect6:
-                    throw runtime_error("We don't support IPv6 yet");
-                    break;
-                case ReadMessageType::Query4:
-                    inet_ntop(AF_INET, &payload.ipv4, ip_addr_str, 128);
-                    cout << "New request for: " << ip_addr_str << endl;
-                    cout << "Allow? (Y/n) ";
+            SetStatus4Payload response_payload = {
+                .ipv4 = payload.ipv4,
+                .status = allow ? Allowed : Blocked
+            };
 
-                    cin >> response;
-                    
-                    allow = response.size() > 0 && (response[0] == 'Y' || response[0] == 'y');
-
-                    response_payload = {
-                        .ipv4 = payload.ipv4,
-                        .status = allow ? Allowed : Blocked
-                    };
-
-                    set_4_payloads.push(response_payload);
-                    trafficmon.write_messages<SetStatus4>(set_4_payloads);
-                    
-                    break;
-                case ReadMessageType::Query6:
-                    throw runtime_error("We don't support IPv6 yet");
-                    break;
-            }
+            set_4_payloads.push_back(response_payload);
+            trafficmon.write_messages<SetStatus4>(set_4_payloads);
+            set_4_payloads.clear();
         }
     }
 

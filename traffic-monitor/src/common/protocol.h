@@ -14,9 +14,9 @@
 
 /*
 Messaging protocol:
-1. Read/write the message type
-2. Read/write the payload count, n, where n*payload size <= MAX_MESSAGE_SIZE
-3. Read/write n payloads (all in one operation)
+1. Open the file corresponding to the message type, for example, /proc/trafficmon/Connect4
+2. Read/write using a buffer of size MAX_MESSAGE_SIZE
+3. Read/write n payloads, and expect the size parameter or return value to be n
 */
 
 #define READ_MESSAGES \
@@ -64,6 +64,7 @@ struct SetStatus6Payload{
 
 #define PAYLOAD_T(name) struct CONCAT(name, Payload)
 
+
 typedef enum {
     #define ENTRY(name) name,
     READ_MESSAGES
@@ -76,6 +77,8 @@ typedef enum{
     #undef ENTRY
 } WriteMessageType;
 
+/* No more headers!
+
 struct ReadHeader {
     ReadMessageType type;
     uint32_t count;
@@ -85,8 +88,8 @@ struct WriteHeader {
     WriteMessageType type;
     uint32_t count;
 };
-
-#define MAX_PAYLOAD_COUNT(name) (MAX_MESSAGE_SIZE / sizeof(struct name##Payload))
-
 int get_read_payload_size(ReadMessageType type);
 int get_write_payload_size(WriteMessageType type);
+*/
+
+#define MAX_PAYLOAD_COUNT(name) (MAX_MESSAGE_SIZE / sizeof(struct name##Payload))

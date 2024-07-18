@@ -16,7 +16,7 @@ extern "C"
 
 using namespace std;
 
-#define TestSession UserTestSession
+#define TestSession KernelTestSession
 
 int main()
 {

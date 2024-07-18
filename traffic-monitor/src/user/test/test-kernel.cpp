@@ -15,35 +15,25 @@ void exit_thread(int signo)
 
 void KernelTestSession::run_filter()
 {
-    queue<ReadMessage> read_messages;
-    queue<SetStatus4Payload> write_messages;
+    Query4Payload read_messages[ReadProps<Query4>::MaxPayloadCount];
+    vector<SetStatus4Payload> write_messages;
 
     while (true)
     {
         signal(SIGINT, graceful_signal_handler);
         // bug: if a signal is caught right here, we will hang forever
-        trafficmon.read_messages(read_messages);
+        int count = trafficmon.read_messages<Query4>(read_messages);
 
-        while (!read_messages.empty())
+        for(int i = 0; i < count; i++)
         {
-            auto msg = read_messages.front();
-            read_messages.pop();
-
-            if (msg.type == ReadMessageType::Query4)
-            {
-                struct in_addr ipv4 = msg.payload.Query4.ipv4;
-
-                write_messages.push(
-                    {.ipv4 = ipv4,
-                     .status = generator.query(ipv4)});
-            }
-            else
-            {
-                throw runtime_error("Unexpected message type");
-            }
+            struct in_addr ipv4 = read_messages[i].ipv4;
+            write_messages.push_back(
+                {.ipv4 = ipv4,
+                 .status = generator.query(ipv4)});
         }
 
-        trafficmon.write_messages<WriteMessageType::SetStatus4>(write_messages);
+        trafficmon.write_messages<SetStatus4>(write_messages);
+        write_messages.clear();
 
         signal(SIGINT, exit_thread);
         if (done)

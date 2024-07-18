@@ -16,69 +16,65 @@ extern "C"
 
 using namespace std;
 
-union ReadMessagePayload
-{
-#define ENTRY(name) PAYLOAD_T(name) name;
-    READ_MESSAGES
-#undef ENTRY
-};
-
-union WriteMessagePayload
-{
-#define ENTRY(name) PAYLOAD_T(name) name;
-    WRITE_MESSAGES
-#undef ENTRY
-};
-
-struct ReadMessage
-{
-    ReadMessageType type;
-    ReadMessagePayload payload;
-};
-
 template <WriteMessageType>
-struct Props;
-
-#define ENTRY(name)                      \
-    template <>                          \
-    struct Props<name>                   \
-    {                                    \
-        using Payload = PAYLOAD_T(name); \
+struct WriteProps;
+#define ENTRY(name)                                                 \
+    template <>                                                     \
+    struct WriteProps<name>                                         \
+    {                                                               \
+        using Payload = PAYLOAD_T(name);                            \
+        static const int MaxPayloadCount = MAX_PAYLOAD_COUNT(name); \
     };
 WRITE_MESSAGES
+#undef ENTRY
+
+#define ENTRY(name) + 1
+constexpr int WRITE_MESSAGE_COUNT = 0 + WRITE_MESSAGES;
+#undef ENTRY
+
+template <ReadMessageType>
+struct ReadProps;
+#define ENTRY(name)                                                 \
+    template <>                                                     \
+    struct ReadProps<name>                                          \
+    {                                                               \
+        using Payload = PAYLOAD_T(name);                            \
+        static const int MaxPayloadCount = MAX_PAYLOAD_COUNT(name); \
+    };
+READ_MESSAGES
+#undef ENTRY
+
+#define ENTRY(name) + 1
+constexpr int READ_MESSAGE_COUNT = 0 + READ_MESSAGES;
 #undef ENTRY
 
 class Trafficmon
 {
 private:
-    int fd;
-    // pulling these out of read_messages for performance reasons
-    ReadHeader read_header;
-    WriteHeader write_header;
-    ssize_t payload_size;
-    ReadMessage message;
-    char temp_buffer[MAX_MESSAGE_SIZE];
+    int write_fd[WRITE_MESSAGE_COUNT];
+    int read_fd[READ_MESSAGE_COUNT];
+
     void handle(int rv);
 
 public:
     Trafficmon();
-    bool read_messages(queue<ReadMessage> &messages);
+
+    /** Precondition: messages is empty */
+    template <ReadMessageType T, size_t N>
+    inline int read_messages(typename ReadProps<T>::Payload (&buffer)[N]){
+        static_assert(N >= ReadProps<T>::MaxPayloadCount, "Buffer passed to read_messages() is too small.");
+        return read(read_fd[T], buffer, 0);
+    }
+
     template <WriteMessageType T>
-    void write_messages(queue<typename Props<T>::Payload> &messages)
+    void write_messages(vector<typename WriteProps<T>::Payload> &messages)
     {
         int count;
-        write_header.type = T;
-        while((count=min(MAX_MESSAGE_SIZE / sizeof(typename Props<T>::Payload), messages.size()))){
-            write_header.count = count;
-
-            for (int i = 0; i < count; i++)
-            {
-                ((typename Props<T>::Payload *)temp_buffer)[i] = messages.front();
-                messages.pop();
-            }
-
-            handle(write(fd, &write_header, sizeof(write_header)));
-            handle(write(fd, temp_buffer, count * sizeof(typename Props<T>::Payload)));
+        int start = 0;
+        while ((count = min(MAX_MESSAGE_SIZE / sizeof(typename WriteProps<T>::Payload), messages.size() - start)))
+        {
+            handle(write(write_fd[T], &messages[start], count));
+            start += count;
         }
     }
 

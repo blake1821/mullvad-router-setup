@@ -39,7 +39,7 @@ struct SetStatus4Payload query_ipv4(struct in_addr ipv4)
     my_debug("Entering query_ipv4 for %u\n", ipv4.s_addr);
     mutex_lock(&wq4_lock);
     struct Query4Payload queryPayload = {.ipv4 = ipv4};
-    enqueue_Query4(queryPayload);
+    enqueue_Query4(&queryPayload);
     requested_ipv4 = ipv4;
     pending_request4_for_write = true;
     my_debug("About to wait in query_ipv4 for %u\n", ipv4.s_addr);
