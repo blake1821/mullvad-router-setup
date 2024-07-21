@@ -1,16 +1,22 @@
-#include "util.h"
+#include "trafficmon.h"
 
-Barrier::Barrier(int count)
+uint64_t get_ip_pair_key(struct in_addr src, struct in_addr dst)
 {
-    pthread_barrier_init(&barrier, NULL, count);
+    return (uint64_t)src.s_addr << 32 | dst.s_addr;
 }
 
-void Barrier::wait()
+uint64_t get_conn_key(Connect4Payload &payload)
 {
-    pthread_barrier_wait(&barrier);
+    return get_ip_pair_key(payload.src, payload.dst) ^ payload.dst_port ^ (payload.protocol << 16);
 }
 
-Barrier::~Barrier()
-{
-    pthread_barrier_destroy(&barrier);
+#ifdef TEST_NETHOOKS
+void print_debug_response(DebugResponsePayload &response){
+    cout << "Debug response: " << endl;
+    #define ENTRY(name) DECLARATION_TF(name)
+    #define DECLARATION(type, name, value) cout << "\t" << #name << ": " << response.name << endl;
+    DEBUG_PARAMS
+    #undef ENTRY
+    #undef DECLARATION
 }
+#endif

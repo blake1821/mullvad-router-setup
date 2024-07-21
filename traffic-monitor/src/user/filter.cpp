@@ -18,9 +18,12 @@ int main(int argc, char *argv[])
 
         for(int i = 0; i < count; i++){
             Query4Payload &payload = query_payloads[i];
-            char ip_addr_str[128];
-            inet_ntop(AF_INET, &payload.ipv4, ip_addr_str, 128);
-            cout << "New request for: " << ip_addr_str << endl;
+            char src_str[128];
+            char dst_str[128];
+            inet_ntop(AF_INET, &payload.src, src_str, 128);
+            inet_ntop(AF_INET, &payload.dst, dst_str, 128);
+
+            cout << "New request for: " << src_str << " -> " << dst_str << endl;
             cout << "Allow? (Y/n) ";
 
             string response;
@@ -29,7 +32,8 @@ int main(int argc, char *argv[])
             bool allow = response.size() > 0 && (response[0] == 'Y' || response[0] == 'y');
 
             SetStatus4Payload response_payload = {
-                .ipv4 = payload.ipv4,
+                .src = payload.src,
+                .dst = payload.dst,
                 .status = allow ? Allowed : Blocked
             };
 

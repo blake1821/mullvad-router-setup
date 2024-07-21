@@ -24,9 +24,11 @@ message(STATUS "Kernel makefile: ${kernel_makefile}")
 # User executables
 set(USER_EXECUTABLES
   "${USER_DIR}/filter.cpp" 
+  "${USER_DIR}/conn-monitor.cpp"
   "${USER_DIR}/test/net-simulator.cpp"
   "${USER_DIR}/test/test.cpp"
   "${USER_DIR}/test/debug-shm-monitor.cpp"
+  "${USER_DIR}/test/debug-kernel.cpp"
   )
 
 # Find source files

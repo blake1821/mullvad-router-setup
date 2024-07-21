@@ -5,26 +5,28 @@
 
 using namespace std;
 
-enum class TestMode{
+enum class TestMode
+{
     RoundRobin,
     Random
 };
 
-class TestGenerator {
+class TestGenerator
+{
 private:
-    int ip_count;
-    vector<struct in_addr> ip_addrs;
-    map<in_addr_t, IPStatus> ip_status;
+    vector<struct SetStatus4Payload> rules;
+    map<uint64_t, IPStatus> ip_status;
     int cache_misses = 0;
     TestMode mode;
-    int ip_index = 0;
+    int rule_index = 0;
 
 public:
-    TestGenerator(int ip_count, TestMode mode);
-    int get_cache_misses(){
+    TestGenerator(int src_count, int dst_count, int rule_count, TestMode mode);
+    int get_cache_misses()
+    {
         return cache_misses;
     }
 
-    tuple<struct in_addr, IPStatus> next();
-    IPStatus query(struct in_addr ipv4);
+    struct SetStatus4Payload next();
+    IPStatus query(struct Query4Payload payload);
 };

@@ -1,5 +1,7 @@
 #include "test-generator.h"
+#include "../util.h"
 #include <math.h>
+
 
 struct in_addr generate_random_ipv4()
 {
@@ -17,38 +19,60 @@ IPStatus generate_random_status()
     return (rand() % 2 == 0) ? Allowed : Blocked;
 }
 
-TestGenerator::TestGenerator(int ip_count, TestMode mode) : mode(mode)
+TestGenerator::TestGenerator(int src_count, int dst_count, int rule_count, TestMode mode) : mode(mode)
 {
-    for (int i = 0; i < ip_count; i++)
+    vector<struct in_addr> src_addrs;
+    vector<struct in_addr> dst_addrs;
+    // fill up the vectors
+    for (int i = 0; i < src_count; i++)
     {
-        struct in_addr ipv4 = generate_random_ipv4();
-        ip_addrs.push_back(ipv4);
-        ip_status[ipv4.s_addr] = generate_random_status();
+        src_addrs.push_back(generate_random_ipv4());
+    }
+    for (int i = 0; i < dst_count; i++)
+    {
+        dst_addrs.push_back(generate_random_ipv4());
+    }
+
+    for (int i = 0; i < rule_count; i++)
+    {
+        // Randomly select a source and destination
+        struct SetStatus4Payload payload = {
+            .src = src_addrs[rand() % src_count],
+            .dst = dst_addrs[rand() % dst_count],
+            .status = generate_random_status()};
+        
+        uint64_t key = get_ip_pair_key(payload.src, payload.dst);
+        if(ip_status.find(key) == ip_status.end()){
+            // place the payload in the map
+            ip_status[key] = payload.status;
+
+            rules.push_back(payload);
+        }
+
     }
 }
 
-tuple<struct in_addr, IPStatus> TestGenerator::next()
+struct SetStatus4Payload TestGenerator::next()
 {
-    struct in_addr ip;
+    struct SetStatus4Payload payload;
     if (mode == TestMode::RoundRobin)
     {
-        ip = ip_addrs[ip_index++];
-        if (ip_index == ip_addrs.size())
+        payload = rules[rule_index++];
+        if (rule_index == rules.size())
         {
-            ip_index = 0;
+            rule_index = 0;
         }
     }
     else
     {
-        ip = ip_addrs[rand() % ip_addrs.size()];
+        payload = rules[rand() % rules.size()];
     }
 
-    return tuple(ip, ip_status[ip.s_addr]);
+    return payload;
 }
 
-
-IPStatus TestGenerator::query(struct in_addr ipv4){
+IPStatus TestGenerator::query(struct Query4Payload payload)
+{
     cache_misses++;
-    return ip_status[ipv4.s_addr];
+    return ip_status[get_ip_pair_key(payload.src, payload.dst)];
 }
-

@@ -12,25 +12,29 @@ void Trafficmon::handle(int rv)
 
 Trafficmon::Trafficmon()
 {
-    // open the proc files
-    #define ENTRY(name) write_fd[WriteMessageType::name] = \
-        open("/proc/" TRAFFICMON_PROC_FILE "/" #name, O_WRONLY);
+// open the proc files
+#define ENTRY(name) write_fd[WriteMessageType::name] = \
+                        open("/proc/" TRAFFICMON_PROC_FILE "/" #name, O_WRONLY);
     WRITE_MESSAGES
-    #undef ENTRY
+#undef ENTRY
 
-    #define ENTRY(name) read_fd[ReadMessageType::name] = \
-        open("/proc/" TRAFFICMON_PROC_FILE "/" #name, O_RDONLY);
+#define ENTRY(name) read_fd[ReadMessageType::name] = \
+                        open("/proc/" TRAFFICMON_PROC_FILE "/" #name, O_RDONLY);
     READ_MESSAGES
-    #undef ENTRY
+#undef ENTRY
 
     // check if the file descriptors are valid
-    for(int i = 0; i < WRITE_MESSAGE_COUNT; i++){
-        if(write_fd[i] < 0){
+    for (int i = 0; i < WRITE_MESSAGE_COUNT; i++)
+    {
+        if (write_fd[i] < 0)
+        {
             throw runtime_error("Failed to open write file");
         }
     }
-    for(int i = 0; i < READ_MESSAGE_COUNT; i++){
-        if(read_fd[i] < 0){
+    for (int i = 0; i < READ_MESSAGE_COUNT; i++)
+    {
+        if (read_fd[i] < 0)
+        {
             throw runtime_error("Failed to open read file");
         }
     }
@@ -39,11 +43,28 @@ Trafficmon::Trafficmon()
 Trafficmon::~Trafficmon()
 {
     // close the proc files
-    for(int i = 0; i < WRITE_MESSAGE_COUNT; i++){
+    for (int i = 0; i < WRITE_MESSAGE_COUNT; i++)
+    {
         close(write_fd[i]);
     }
 
-    for(int i = 0; i < READ_MESSAGE_COUNT; i++){
+    for (int i = 0; i < READ_MESSAGE_COUNT; i++)
+    {
         close(read_fd[i]);
     }
 }
+
+#ifdef TEST_NETHOOKS
+DebugResponsePayload Trafficmon::debug(DebugRequestPayload &request)
+{
+    vector<DebugRequestPayload> requests = {request};
+    write_messages<DebugRequest>(requests);
+
+    DebugResponsePayload response[ReadProps<DebugResponse>::MaxPayloadCount];
+    int count = read_messages<DebugResponse>(response);
+
+    assert(count == 1);
+
+    return response[0];
+}
+#endif

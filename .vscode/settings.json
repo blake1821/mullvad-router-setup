@@ -17,9 +17,12 @@
                 "ignoreFailures": true
             },
             {
-                "description": "Ignore SIGINT",
-                "text": "handle SIGINT nostop noprint",
-                "ignoreFailures": true
+                "description": "Ignore SIGUSR1",
+                "text": "handle SIGUSR1 nostop noprint"
+            },
+            {
+                "description": "Ignore SIGUSR2",
+                "text": "handle SIGUSR2 nostop noprint"
             }
         ]
     },
@@ -74,6 +77,14 @@
         "stdexcept": "cpp",
         "streambuf": "cpp",
         "typeinfo": "cpp",
-        "mutex": "cpp"
+        "mutex": "cpp",
+        "condition_variable": "cpp",
+        "ctime": "cpp",
+        "set": "cpp",
+        "ratio": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp",
+        "thread": "cpp",
+        "test": "c"
     }
 }

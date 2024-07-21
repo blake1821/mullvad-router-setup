@@ -28,7 +28,7 @@ struct WriteProps;
 WRITE_MESSAGES
 #undef ENTRY
 
-#define ENTRY(name) + 1
+#define ENTRY(name) +1
 constexpr int WRITE_MESSAGE_COUNT = 0 + WRITE_MESSAGES;
 #undef ENTRY
 
@@ -44,7 +44,7 @@ struct ReadProps;
 READ_MESSAGES
 #undef ENTRY
 
-#define ENTRY(name) + 1
+#define ENTRY(name) +1
 constexpr int READ_MESSAGE_COUNT = 0 + READ_MESSAGES;
 #undef ENTRY
 
@@ -59,9 +59,9 @@ private:
 public:
     Trafficmon();
 
-    /** Precondition: messages is empty */
     template <ReadMessageType T, size_t N>
-    inline int read_messages(typename ReadProps<T>::Payload (&buffer)[N]){
+    inline int read_messages(typename ReadProps<T>::Payload (&buffer)[N])
+    {
         static_assert(N >= ReadProps<T>::MaxPayloadCount, "Buffer passed to read_messages() is too small.");
         return read(read_fd[T], buffer, 0);
     }
@@ -78,5 +78,22 @@ public:
         }
     }
 
+#ifdef TEST_NETHOOKS
+    DebugResponsePayload debug(DebugRequestPayload &request);
+#endif
+
     ~Trafficmon();
 };
+
+template <ReadMessageType T>
+class PayloadHandler
+{
+public:
+    virtual void handle(typename ReadProps<T>::Payload &payload) = 0;
+};
+
+typedef PayloadHandler<Query4> QueryHandler;
+
+#ifdef TEST_NETHOOKS
+typedef PayloadHandler<TestVerdict4> VerdictHandler;
+#endif

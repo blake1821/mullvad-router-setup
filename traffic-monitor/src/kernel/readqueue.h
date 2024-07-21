@@ -18,3 +18,7 @@ READ_MESSAGES
 
 void init_read_queue(void);
 void exit_read_queue(void);
+
+#ifdef TEST_NETHOOKS
+void debug_get_queue_sizes(struct DebugResponsePayload *response);
+#endif
