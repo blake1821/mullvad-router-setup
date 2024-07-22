@@ -15,7 +15,7 @@ struct list_head
 #define TRAFFICMON_PROC_FILE "trafficmon"
 #define MAX_MESSAGE_SIZE 4096
 
-#define TEST_NETHOOKS
+// #define TEST_NETHOOKS
 
 #define CONCAT(x, y) x##y
 
@@ -35,7 +35,8 @@ Messaging protocol:
 #define DEFAULT_WRITE_MESSAGES \
     ENTRY(SetStatus4)          \
     ENTRY(SetStatus6)          \
-    ENTRY(SetNfEnabled)
+    ENTRY(SetNfEnabled)        \
+    ENTRY(Reset)
 
 #ifdef TEST_NETHOOKS
 
@@ -140,6 +141,11 @@ struct SetNfEnabledPayload
     char outgoing_dev_name[32];
 };
 
+struct ResetPayload
+{
+    bool reset;
+};
+
 #ifdef TEST_NETHOOKS
 struct TestPacket4Payload
 {
@@ -149,7 +155,6 @@ struct TestPacket4Payload
 struct DebugRequestPayload
 {
     bool avoid_locking;
-    bool reset;
 };
 #endif
 

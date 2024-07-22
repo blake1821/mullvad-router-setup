@@ -10,9 +10,12 @@ int main(int argc, char *argv[])
 
     class LocalHandler : VerdictHandler
     {
-        void handle(ReadProps<TestVerdict4>::Payload &payload)
+        void handle(ReadProps<TestVerdict4>::Payload *payload, int count)
         {
-            cout << "Received verdict: " << payload.allowed << endl;
+            for (int i = 0; i < count; i++)
+            {
+                cout << "Received verdict: " << payload[i].allowed << endl;
+            }
         }
     };
 
@@ -43,15 +46,14 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        vector<TestPacket4Payload> payloads;
-        Connect4Payload conn = {
-            .dst_port = 1000,
-            .protocol = ProtoTcp,
-            .src = src,
-            .dst = dst,
-        };
-        payloads.push_back((TestPacket4Payload){conn});
-        trafficmon.write_messages<TestPacket4>(payloads);
+        TestPacket4Payload payload = {
+            .conn = {
+                .dst_port = 1000,
+                .protocol = ProtoTcp,
+                .src = src,
+                .dst = dst,
+            }};
+        trafficmon.write_message<TestPacket4>(payload);
         // cout << "Wrote packet. Waiting for verdict..." << endl;
         sleep(1);
     }

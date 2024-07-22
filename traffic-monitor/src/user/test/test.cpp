@@ -14,7 +14,7 @@ extern "C"
 }
 #include "../reading-thread.h"
 
-#define KERNEL_TEST 1
+#define KERNEL_TEST 0
 
 using namespace std;
 

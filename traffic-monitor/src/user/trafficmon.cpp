@@ -57,8 +57,7 @@ Trafficmon::~Trafficmon()
 #ifdef TEST_NETHOOKS
 DebugResponsePayload Trafficmon::debug(DebugRequestPayload &request)
 {
-    vector<DebugRequestPayload> requests = {request};
-    write_messages<DebugRequest>(requests);
+    write_message<DebugRequest>(request);
 
     DebugResponsePayload response[ReadProps<DebugResponse>::MaxPayloadCount];
     int count = read_messages<DebugResponse>(response);

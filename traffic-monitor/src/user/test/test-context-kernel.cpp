@@ -16,14 +16,16 @@ public:
         this->handler = handler;
     }
 
-    void handle(Query4Payload &payload) override
+    void handle(Query4Payload *payloads, int count) override
     {
-        handler->handle_query(payload);
+        for(int i = 0; i < count; i++)
+            handler->handle_query(payloads[i]);
     }
 
-    void handle(TestVerdict4Payload &payload) override
+    void handle(TestVerdict4Payload *payloads, int count) override
     {
-        handler->handle_verdict(payload.conn, payload.allowed ? Allowed : Blocked);
+        for(int i = 0; i < count; i++)
+            handler->handle_verdict(payloads[i].conn, payloads[i].allowed ? Allowed : Blocked);
     }
 };
 
@@ -41,17 +43,15 @@ public:
 
     void send_packet(struct Connect4Payload &payload) override
     {
-        vector<struct TestPacket4Payload> payloads;
-        payloads.push_back((struct TestPacket4Payload){
-            .conn = payload});
-        trafficmon.write_messages<TestPacket4>(payloads);
+        struct TestPacket4Payload packet = {
+            .conn = payload,
+        };
+        trafficmon.write_message<TestPacket4>(packet);
     }
 
     void send_status(struct SetStatus4Payload &payload) override
     {
-        vector<struct SetStatus4Payload> payloads;
-        payloads.push_back(payload);
-        trafficmon.write_messages<SetStatus4>(payloads);
+        trafficmon.write_message<SetStatus4>(payload);
     }
 
     void start_reading(VirtualMessageHandler *handler) override
@@ -78,7 +78,7 @@ public:
 
     void debug() override
     {
-        DebugRequestPayload req = {.reset = false};
+        DebugRequestPayload req = {.avoid_locking = true};
         DebugResponsePayload debug_info = trafficmon.debug(req);
         print_debug_response(debug_info);
     }
@@ -95,7 +95,7 @@ public:
     {
     }
 
-    void handle(Connect4Payload &payload) override
+    void handle(Connect4Payload *payload, int n) override
     {
     }
 };

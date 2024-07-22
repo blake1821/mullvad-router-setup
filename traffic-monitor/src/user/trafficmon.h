@@ -78,6 +78,12 @@ public:
         }
     }
 
+    template <WriteMessageType T>
+    void write_message(typename WriteProps<T>::Payload &message)
+    {
+        handle(write(write_fd[T], &message, 1));
+    }
+
 #ifdef TEST_NETHOOKS
     DebugResponsePayload debug(DebugRequestPayload &request);
 #endif
@@ -89,7 +95,7 @@ template <ReadMessageType T>
 class PayloadHandler
 {
 public:
-    virtual void handle(typename ReadProps<T>::Payload &payload) = 0;
+    virtual void handle(typename ReadProps<T>::Payload *payload, int n) = 0;
 };
 
 typedef PayloadHandler<Query4> QueryHandler;

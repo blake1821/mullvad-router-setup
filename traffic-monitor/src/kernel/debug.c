@@ -11,10 +11,6 @@ void on_DebugRequest(struct DebugRequestPayload *payload, int n)
 {
     if (n == 1)
     {
-        if (payload->reset)
-        {
-            // ...
-        }
 
         // debug params. all must be defined here or the compiler will complain
         int debug_enqueued_ipv4;

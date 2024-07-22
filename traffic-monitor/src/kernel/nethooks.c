@@ -94,9 +94,13 @@ static struct nf_hook_ops nfho = {
     .priority = NF_IP_PRI_MANGLE,
 };
 
+static void hook_drop(struct net *net){
+    // do nothing??
+}
+
 static struct nf_queue_handler nfqh = {
     .outfn = queue_hook,
-    .nf_hook_drop = NULL // ???
+    .nf_hook_drop = hook_drop // ???
 };
 
 void on_SetNfEnabled(struct SetNfEnabledPayload *payloads, int count)
@@ -127,7 +131,7 @@ void on_SetNfEnabled(struct SetNfEnabledPayload *payloads, int count)
             return;
         }
         nf_unregister_net_hook(&init_net, &nfho);
-        nf_unregister_queue_handler(); /* ??? */
+        nf_unregister_queue_handler();
         hooks_enabled = false;
     }
 }

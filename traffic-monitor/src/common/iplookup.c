@@ -211,7 +211,6 @@ void on_SetStatus4(struct SetStatus4Payload *payloads, int n)
 
 IPStatus get_ipv4_status(struct in_addr src, struct in_addr dst, uint16_t *queue_no)
 {
-
     mutex_lock(&ip4_lock);
 
     // check if a status frame is already allocated for this address
@@ -285,6 +284,35 @@ void init_iplookup(void)
 {
 }
 
+void on_Reset(struct ResetPayload *payload, int n)
+{
+    mutex_lock(&ip4_lock);
+
+    if (n > 0)
+    {
+        memset(ipv4_hash_table, 0xFF, sizeof(ipv4_hash_table));
+
+        struct in_addr src;
+        struct in_addr dst;
+        int16_t slot;
+
+        for (int q_index = 0; q_index != (1 << Q_BITS); q_index++)
+        {
+            if (ipv4_status_queue[q_index].slot > EMPTY &&
+                ipv4_status_queue[q_index].status == Pending)
+            {
+                dispatch_queue4(grab_queue(&ipv4_status_queue[q_index]), Blocked);
+            }
+
+            ipv4_status_queue[q_index].slot = EMPTY;
+        }
+
+        ipv4_tombstone_count = 0;
+    }
+
+    mutex_unlock(&ip4_lock);
+}
+
 int get_enqueued_ipv4(void)
 {
     mutex_lock(&ip4_lock);
@@ -294,7 +322,8 @@ int get_enqueued_ipv4(void)
         if (ipv4_status_queue[i].slot >= 0)
         {
             struct list_head *head = ipv4_status_queue[i].head;
-            while(head > (struct list_head*) 1){
+            while (head > (struct list_head *)1)
+            {
                 head = head->next;
                 count++;
             }

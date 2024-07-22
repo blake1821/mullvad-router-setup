@@ -1,20 +1,18 @@
-#include "trafficmon.h"
+#include "../trafficmon.h"
 
+/*
 int main(int argc, char *argv[])
 {
 
     Trafficmon trafficmon;
     Query4Payload query_payloads[ReadProps<Query4>::MaxPayloadCount];
-    vector<SetStatus4Payload> set_4_payloads;
 
     while (true)
     {
-
         cout << "Reading a message..." << endl;
         
         int count = trafficmon.read_messages<Query4>(query_payloads);
         assert(count);
-
 
         for(int i = 0; i < count; i++){
             Query4Payload &payload = query_payloads[i];
@@ -37,11 +35,11 @@ int main(int argc, char *argv[])
                 .status = allow ? Allowed : Blocked
             };
 
-            set_4_payloads.push_back(response_payload);
-            trafficmon.write_messages<SetStatus4>(set_4_payloads);
-            set_4_payloads.clear();
+            trafficmon.write_message<SetStatus4>(response_payload);
         }
     }
 
     return 0;
 }
+*/
+
