@@ -1,19 +1,20 @@
 #include "protocol.h"
 
 // Defined in iplookup.c:
-
 void init_iplookup(void);
-void on_SetStatus4(struct SetStatus4Payload *payload, int n);
-// TODO: void set_ipv6_status(struct SetStatus4Payload payload);
-IPStatus get_ipv4_status(struct in_addr src, struct in_addr dst, uint16_t *queue_no);
-bool enqueue_ipv4(struct list_head *head, uint16_t queue_no, struct in_addr src, struct in_addr dst);
-int get_enqueued_ipv4(void);
-// TODO: IPStatus get_ipv6_status(struct in6_addr ipv6);
+void on_Reset(struct ResetPayload *payload, int n);
 
-// Defined in readqueue.c:
-void enqueue_Query4(struct Query4Payload *payload);
-// TODO: ipv6
+// Defined in each iplookup.<v>.c file:
+#define DECLARE_IP_LOOKUP(v)                                                                                      \
+    /* defined in iplookup. */                                                                                    \
+    IPStatus __GET_IPSTATUS(v)(__IP_ADDR_T(v) src, __IP_ADDR_T(v) dst, uint16_t * queue_no);                      \
+    bool __ENQUEUE_PACKET(v)(struct list_head * head, uint16_t queue_no, __IP_ADDR_T(v) src, __IP_ADDR_T(v) dst); \
+    void __ON_SETSTATUS(v)(struct SetStatus##v##Payload * payload, int n);                                        \
+    int __GET_ENQUEUED_COUNT(v)(void);                                                                            \
+    void __IP_RESET(v)(void);                                                                                     \
+    /* defined in nethooks.c */                                                                                   \
+    void __DISPATCH_QUEUE(v)(struct list_head * head, IPStatus status__possibly_pending);                         \
+    /* defined in readqueue.c */                                                                                  \
+    void __ENQUEUE_QUERY(v)(struct Query##v##Payload * payload);
 
-// defined in nethooks.c
-// note: these are both protected by the same lock
-void dispatch_queue4(struct list_head *head, IPStatus status__possibly_pending);
+APPLY(DECLARE_IP_LOOKUP, IP_VERSIONS)

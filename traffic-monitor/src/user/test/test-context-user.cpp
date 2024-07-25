@@ -98,7 +98,7 @@ public:
                 }
 
                 uint16_t queue_no;
-                IPStatus status = get_ipv4_status(conn.src, conn.dst, &queue_no);
+                IPStatus status = ipv4_get_status(conn.src, conn.dst, &queue_no);
 
                 if (status == Pending)
                 {
@@ -108,7 +108,7 @@ public:
                     list_head *head = new list_head();
                     head->data = &pending_connects[key];
                     mallocs++;
-                    if (!enqueue_ipv4(head, queue_no, conn.src, conn.dst))
+                    if (!ipv4_enqueue_packet(head, queue_no, conn.src, conn.dst))
                         throw runtime_error("Failed to enqueue ipv4");
                 }
                 else

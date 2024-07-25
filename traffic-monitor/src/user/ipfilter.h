@@ -3,25 +3,44 @@
 #include <mutex>
 #include <map>
 #include <set>
+#include "data/iprule.h"
+#include "data/connection.h"
 
-class FilterHandler{
+
+class FilterHandler
+{
 public:
-    virtual void handle_connection(Connect4Payload &conn, bool allowed) = 0;
+    virtual void handle_connection(Connection &conn) = 0;
 };
 
-class IPFilter : protected PayloadHandler<Query4>, protected PayloadHandler<Connect4>
+
+#define IPFilterReadMessages PAIRAPPLYCOMMA(CONCAT, (IP_VERSIONS), Query, Connect)
+
+#define _MAKE_PAYLOAD_HANDLER(T) \
+protected                        \
+    PayloadHandler<T>
+class IPFilter : APPLYCOMMA(_MAKE_PAYLOAD_HANDLER, IPFilterReadMessages)
 {
+#undef _MAKE_PAYLOAD_HANDLER
+
 private:
     Trafficmon trafficmon;
-    set<uint64_t> allowed;
-    mutex rules_mutex;
-    ReadingThread<Query4> query_thr;
-    ReadingThread<Connect4> connect_thr;
+
+#define _DECLARE_IP_READER_THREAD(message) \
+    ReadingThread<message> thr_##message;  \
+    void handle(PAYLOAD_T(message) * payloads, int count);
+    APPLY(_DECLARE_IP_READER_THREAD, IPFilterReadMessages)
+#undef _DECLARE_IP_READER_THREAD
+
+#define _MAKE_IP_MEMBERS(version)   \
+    set<uint64_t> allowed##version; \
+    mutex rules_mutex##version;
+    APPLY(_MAKE_IP_MEMBERS, IP_VERSIONS)
+#undef _MAKE_IP_MEMBERS
     FilterHandler *handler;
     string ifname;
+
 protected:
-    void handle(Query4Payload *payloads, int count) override;
-    void handle(Connect4Payload *payloads, int count) override;
     void set_enabled(bool enabled);
 
 public:

@@ -17,6 +17,7 @@ void IPFilter::handle(Query4Payload *payloads, int count)
             .status = is_allowed(payloads[i]) ? Allowed : Blocked,
         });
     }
+    
     rules_mutex.unlock();
 
     trafficmon.write_messages<SetStatus4>(responses);

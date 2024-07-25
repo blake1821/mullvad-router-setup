@@ -11,13 +11,12 @@ struct list_head
     void *data;
 };
 #endif
+#include "ipmacros.h"
 
 #define TRAFFICMON_PROC_FILE "trafficmon"
 #define MAX_MESSAGE_SIZE 4096
 
 // #define TEST_NETHOOKS
-
-#define CONCAT(x, y) x##y
 
 /*
 Messaging protocol:
@@ -27,14 +26,10 @@ Messaging protocol:
 */
 
 #define DEFAULT_READ_MESSAGES \
-    ENTRY(Connect4)           \
-    ENTRY(Connect6)           \
-    ENTRY(Query4)             \
-    ENTRY(Query6)
+    IP_READ_MESSAGES
 
 #define DEFAULT_WRITE_MESSAGES \
-    ENTRY(SetStatus4)          \
-    ENTRY(SetStatus6)          \
+    IP_WRITE_MESSAGES          \
     ENTRY(SetNfEnabled)        \
     ENTRY(Reset)
 
@@ -74,33 +69,8 @@ typedef enum
 } ConnectProtocol;
 
 // read() messages
-struct Connect4Payload
-{
-    uint16_t dst_port;
-    ConnectProtocol protocol;
-    struct in_addr src;
-    struct in_addr dst;
-};
-
-struct Connect6Payload
-{
-    uint16_t dst_port;
-    ConnectProtocol protocol;
-    struct in6_addr src;
-    struct in6_addr dst;
-};
-
-struct Query4Payload
-{
-    struct in_addr src;
-    struct in_addr dst;
-};
-
-struct Query6Payload
-{
-    struct in6_addr src;
-    struct in6_addr dst;
-};
+APPLY(DECLARE_CONNECT_STRUCT, IP_VERSIONS)
+APPLY(DECLARE_QUERY_STRUCT, IP_VERSIONS)
 
 #ifdef TEST_NETHOOKS
 struct TestVerdict4Payload
@@ -121,19 +91,7 @@ struct DebugResponsePayload
 #endif
 
 // write() messages
-struct SetStatus4Payload
-{
-    struct in_addr src;
-    struct in_addr dst;
-    IPStatus status;
-};
-
-struct SetStatus6Payload
-{
-    struct in6_addr src;
-    struct in6_addr dst;
-    IPStatus status;
-};
+APPLY(DECLARE_SETSTATUS_STRUCT, IP_VERSIONS)
 
 struct SetNfEnabledPayload
 {
