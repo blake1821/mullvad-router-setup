@@ -18,7 +18,7 @@
                 "-include",
                 "/usr/src/linux-headers-6.1.0-22-common/include/linux/kconfig.h",
                 "-include",
-                "/usr/src/linux-headers-6.1.0-22-common/include/linux/compiler_types.h",
+                "/usr/src/linux-headers-6.1.0-22-common/include/linux/compiler_types.h"
             ],
             "defines": [
                 "__KERNEL__",

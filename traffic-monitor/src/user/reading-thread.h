@@ -32,7 +32,7 @@ private:
             // bug: if a signal is caught before we enter the read syscall, we will hang forever
             // luckily, this class is only used for testing
             int count = trafficmon->read_messages<T>(read_messages);
-            if(count < 0)
+            if (count < 0)
                 break;
             handler->handle(read_messages, count);
         }

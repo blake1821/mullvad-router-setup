@@ -85,6 +85,8 @@
         "semaphore": "cpp",
         "stop_token": "cpp",
         "thread": "cpp",
-        "test": "c"
+        "test": "c",
+        "*.ctemplate": "cpp",
+        "unordered_set": "cpp"
     }
 }

@@ -82,7 +82,7 @@ foreach(executable ${USER_EXECUTABLES})
   add_executable(${exec_name} ${current_exec_sources})
 
   # Set C++ standard
-  set_property(TARGET ${exec_name} PROPERTY CXX_STANDARD 17)
+  set_property(TARGET ${exec_name} PROPERTY CXX_STANDARD 20)
   set_property(TARGET ${exec_name} PROPERTY CXX_STANDARD_REQUIRED ON)
   list(APPEND BUILD_TARGETS "${exec_name}")
 endforeach()

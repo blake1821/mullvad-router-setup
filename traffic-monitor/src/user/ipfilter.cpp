@@ -1,44 +1,52 @@
 #include "ipfilter.h"
 #include "util.h"
 
-#define is_allowed(conn) \
-    (allowed.find(get_ip_pair_key(conn.src, conn.dst)) != allowed.end())
-
-void IPFilter::handle(Query4Payload *payloads, int count)
-{
-    vector<SetStatus4Payload> responses;
-
-    rules_mutex.lock();
-    for (int i = 0; i < count; i++)
-    {
-        responses.push_back((SetStatus4Payload){
-            .src = payloads[i].src,
-            .dst = payloads[i].dst,
-            .status = is_allowed(payloads[i]) ? Allowed : Blocked,
-        });
+#define _DECLARE_QUERY_HANDLER(v)                                             \
+    void IPFilter::handle(Query##v##Payload *payloads, int count)             \
+    {                                                                         \
+        vector<SetStatus##v##Payload> responses;                              \
+        rules_mutex.lock();                                                   \
+        for (int i = 0; i < count; i++)                                       \
+        {                                                                     \
+            IPv##v##Address src(payloads[i].src);                             \
+            IPv##v##Address dst(payloads[i].dst);                             \
+            responses.push_back((SetStatus##v##Payload){                      \
+                .src = payloads[i].src,                                       \
+                .dst = payloads[i].dst,                                       \
+                .status = filter##v.is_allowed(src, dst) ? Allowed : Blocked, \
+            });                                                               \
+        }                                                                     \
+        rules_mutex.unlock();                                                 \
+        trafficmon.write_messages<SetStatus##v>(responses);                   \
     }
-    
-    rules_mutex.unlock();
+APPLY(_DECLARE_QUERY_HANDLER, IP_VERSIONS)
+#undef _DECLARE_QUERY_HANDLER
 
-    trafficmon.write_messages<SetStatus4>(responses);
-}
-
-void IPFilter::handle(Connect4Payload *payloads, int count)
-{
-    bool connection_allowed[ReadProps<Connect4>::MaxPayloadCount];
-
-    rules_mutex.lock();
-    for (int i = 0; i < count; i++)
-    {
-        connection_allowed[i] = is_allowed(payloads[i]);
+#define _CONNECT_HANDLER(v)                                              \
+    void IPFilter::handle(Connect##v##Payload *payloads, int count)      \
+    {                                                                    \
+        vector<Verdict> verdicts;                                        \
+        rules_mutex.lock();                                              \
+        for (int i = 0; i < count; i++)                                  \
+        {                                                                \
+            IPv##v##Address src(payloads[i].src);                        \
+            IPv##v##Address dst(payloads[i].dst);                        \
+            verdicts.push_back(Verdict(IPv##v##Connection(               \
+                                           src,                          \
+                                           dst,                          \
+                                           payloads[i].dst_port,         \
+                                           payloads[i].protocol),        \
+                                       filter##v.is_allowed(src, dst))); \
+        }                                                                \
+        rules_mutex.unlock();                                            \
+        for (int i = 0; i < count; i++)                                  \
+        {                                                                \
+            Verdict verdict = verdicts[i];                               \
+            handler->handle_verdict(verdict);                            \
+        }                                                                \
     }
-    rules_mutex.unlock();
-
-    for (int i = 0; i < count; i++)
-    {
-        handler->handle_connection(payloads[i], connection_allowed[i]);
-    }
-}
+APPLY(_CONNECT_HANDLER, IP_VERSIONS)
+#undef _CONNECT_HANDLER
 
 void IPFilter::set_enabled(bool enabled)
 {
@@ -52,50 +60,60 @@ void IPFilter::set_enabled(bool enabled)
 IPFilter::IPFilter(string ifname, FilterHandler *handler)
     : handler(handler)
 {
-    query_thr.start(this, trafficmon);
-    connect_thr.start(this, trafficmon);
+#define _START_READER_THREAD(message) \
+    thr_##message.start(this, trafficmon);
+    APPLY(_START_READER_THREAD, IPFilterReadMessages)
+#undef _START_READER_THREAD
     clear_rules();
     set_enabled(true);
 }
 
-void IPFilter::add_rules(vector<SetStatus4Payload> &rules)
+void IPFilter::add_rules(vector<IPRule> &rules)
 {
+    vector<SetStatus4Payload> responses4;
+    vector<SetStatus6Payload> responses6;
+
     rules_mutex.lock();
     for (auto &rule : rules)
     {
-        uint64_t key = get_ip_pair_key(rule.src, rule.dst);
-        if (rule.status == Allowed)
-        {
-            allowed.insert(key);
-        }
-        else
-        {
-            allowed.erase(key);
-        }
+        match(IPRule, rule, r)
+        (IPv4Rule, {
+            filter4.add_rule(r);
+            responses4.push_back(r.to_set_status_payload());
+        }),
+        (IPv6Rule, {
+            filter6.add_rule(r);
+            responses6.push_back(r.to_set_status_payload());
+        }));
     }
     rules_mutex.unlock();
-    trafficmon.write_messages<SetStatus4>(rules);
+    trafficmon.write_messages<SetStatus4>(responses4);
+    trafficmon.write_messages<SetStatus6>(responses6);
 }
 
 void IPFilter::clear_rules()
 {
     rules_mutex.lock();
-    allowed.clear();
+    filter4.clear_rules();
+    filter6.clear_rules();
     rules_mutex.unlock();
-    ResetPayload reset_payload = {
-        .reset = true};
+    ResetPayload reset_payload = {.reset = true};
     trafficmon.write_message<Reset>(reset_payload);
 }
 
 void IPFilter::kill()
 {
     set_enabled(false);
-    query_thr.kill();
-    connect_thr.kill();
+#define _STOP_READER_THREAD(message) \
+    thr_##message.kill();
+    APPLY(_STOP_READER_THREAD, IPFilterReadMessages)
+#undef _STOP_READER_THREAD
 }
 
 void IPFilter::join()
 {
-    query_thr.join();
-    connect_thr.join();
+#define _STOP_READER_THREAD(message) \
+    thr_##message.join();
+    APPLY(_STOP_READER_THREAD, IPFilterReadMessages)
+#undef _STOP_READER_THREAD
 }

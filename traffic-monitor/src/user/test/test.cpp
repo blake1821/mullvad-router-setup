@@ -24,34 +24,40 @@ class TestSession : VirtualMessageHandler
 private:
     TestContext *context;
     TestGenerator *generator;
-    map<uint64_t, pair<IPStatus, bool>> conn_map;
+    map<uint64_t, pair<bool, bool>> conn_map;
     mutex conn_map_mutex;
     int sent_count;
     int recv_count;
 
 public:
-    void handle_query(Query4Payload &query) override
+    void handle_query(IPQuery &query) override
     {
-        IPStatus status = generator->query(query);
-        SetStatus4Payload payload = {
-            .src = query.src,
-            .dst = query.dst,
-            .status = status};
-        context->send_status(payload);
+        bool allowed = generator->is_allowed(query);
+        match(IPQuery, query, v)
+        (IPv4Query, {
+            IPRule rule = IPv4Rule(v.src, v.dst, allowed);
+            context->send_status(rule);
+        }),
+        (IPv6Query, {
+            IPRule rule = IPv6Rule(v.src, v.dst, allowed);
+            context->send_status(rule);
+        }));
     }
 
-    void handle_verdict(Connect4Payload &conn, IPStatus status) override
+    void handle_verdict(Verdict &verdict) override
     {
-        uint64_t key = get_conn_key(conn);
+        uint64_t key = verdict.get_connection().base().get_key();
         conn_map_mutex.lock();
         auto it = conn_map.find(key);
         if (it != conn_map.end())
         {
-            assert(it->second.first == status || status != Allowed);
+            assert(it->second.first == verdict.is_allowed() || !verdict.is_allowed());
             it->second.second = true;
             recv_count++;
-        }else{
-            assert(status != Allowed);
+        }
+        else
+        {
+            assert(!verdict.is_allowed());
         }
         conn_map_mutex.unlock();
     }
@@ -86,14 +92,18 @@ public:
             int batch_size = min((rand() % max_batch_size) + 1, rounds_left);
             for (int i = 0; i < batch_size; i++)
             {
-                Connect4Payload conn;
-                SetStatus4Payload payload = generator->next();
-                conn.dst = payload.dst;
-                conn.dst_port = rand() % 65536;
-                conn.protocol = ProtoTcp;
-                conn.src = payload.src;
+                IPRule rule = generator->next();
+                Connection conn = UNINITIALIZED_CONNECTION;
+                match(IPRule, rule, v)
+                (IPv4Rule, {
+                    conn = IPv4Connection(v.src, v.dst, rand() % 65536, ProtoTCP);
+                }),
+                (IPv6Rule, {
+                    conn = IPv6Connection(v.src, v.dst, rand() % 65536, ProtoTCP);
+                }));
+                uint64_t key = conn.base().get_key();
                 conn_map_mutex.lock();
-                conn_map[get_conn_key(conn)] = {payload.status, false};
+                conn_map[key] = {rule.base().is_allowed(), false};
                 conn_map_mutex.unlock();
                 _GLIBCXX_WRITE_MEM_BARRIER;
                 context->send_packet(conn);
@@ -124,6 +134,7 @@ public:
 void run_test(
     TestContext *context,
     int test_session_count,
+    IPVersion version,
     int src_count,
     int dst_count,
     int rule_count,
@@ -133,13 +144,14 @@ void run_test(
     int expected_cache_misses)
 {
     cout << "Running " << test_session_count << "x tests with \n\t"
+         << (version == IPv4 ? "IPv4" : "IPv6") << ", \n\t"
          << src_count << " src ips, \n\t" << dst_count << " dst ips, \n\t"
          << rule_count << " rules, \n\tmode = " << (int)mode << ", \n\t"
          << max_batch_size << " >= rounds per batch, \n\t" << num_rounds << " rounds"
          << endl;
     for (int i = 0; i < test_session_count; i++)
     {
-        TestGenerator generator(src_count, dst_count, rule_count, mode);
+        TestGenerator generator(version, src_count, dst_count, rule_count, mode);
         TestSession session(context, &generator);
         int cache_misses = session.run_test(max_batch_size, num_rounds);
         cout << "Cache misses: " << cache_misses << ". (Expected " << expected_cache_misses << ")" << endl;
@@ -165,6 +177,7 @@ int main()
     run_test(
         context,          // TestContext
         1,                // test_session_count
+        IPv4,             // version
         1,                // src_count
         1,                // dst_count
         1,                // rule_count
@@ -191,6 +204,7 @@ int main()
     run_test(
         context,          // TestContext
         2,                // test_session_count
+        IPv6,             // version
         3,                // src_count
         100,              // dst_count
         100,              // rule_count
@@ -203,6 +217,7 @@ int main()
     run_test(
         context,              // TestContext
         2,                    // test_session_count
+        IPv4,                 // version
         4,                    // src_count
         1000,                 // dst_count
         1000,                 // rule_count
@@ -215,6 +230,7 @@ int main()
     run_test(
         context,              // TestContext
         1,                    // test_session_count
+        IPv6,                 // version
         100,                  // src_count
         1000,                 // dst_count
         1000,                 // rule_count
@@ -227,6 +243,7 @@ int main()
     run_test(
         context,          // TestContext
         1,                // test_session_count
+        IPv4,             // version
         100,              // src_count
         1000,             // dst_count
         580,              // rule_count

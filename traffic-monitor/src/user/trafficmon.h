@@ -4,15 +4,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-extern "C"
-{
-#include "../common/protocol.h"
-}
 #include <string.h>
 #include <vector>
 #include <queue>
 #include <type_traits>
 #include <cassert>
+#include "data/ipprops.h"
 
 using namespace std;
 
@@ -47,6 +44,8 @@ READ_MESSAGES
 #define ENTRY(name) +1
 constexpr int READ_MESSAGE_COUNT = 0 + READ_MESSAGES;
 #undef ENTRY
+
+
 
 class Trafficmon
 {
@@ -97,9 +96,3 @@ class PayloadHandler
 public:
     virtual void handle(typename ReadProps<T>::Payload *payload, int n) = 0;
 };
-
-typedef PayloadHandler<Query4> QueryHandler;
-
-#ifdef TEST_NETHOOKS
-typedef PayloadHandler<TestVerdict4> VerdictHandler;
-#endif

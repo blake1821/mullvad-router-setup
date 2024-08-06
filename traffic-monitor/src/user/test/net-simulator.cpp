@@ -4,7 +4,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-#ifdef TEST_NETHOOKS
+#ifdef TEST_NETHOOKS_NVM // lets not use this
 
     Trafficmon trafficmon;
 

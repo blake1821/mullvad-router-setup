@@ -10,21 +10,25 @@ extern "C"
 }
 #include <string.h>
 #include "../trafficmon.h"
+#include "../data/iprule.h"
+#include "../data/connection.h"
+#include "../data/query.h"
 
 using namespace std;
+
 
 class VirtualMessageHandler
 {
 public:
-    virtual void handle_query(struct Query4Payload &payload) = 0;
-    virtual void handle_verdict(struct Connect4Payload &payload, IPStatus status) = 0;
+    virtual void handle_query(IPQuery &query) = 0;
+    virtual void handle_verdict(Verdict &verdict) = 0;
 };
 
 class TestContext
 {
 public:
-    virtual void send_packet(struct Connect4Payload &payload) = 0;
-    virtual void send_status(struct SetStatus4Payload &payload) = 0;
+    virtual void send_packet(Connection &connection) = 0;
+    virtual void send_status(IPRule &rule) = 0;
 
     // launch a thread to read packets
     // note: this does nothing in the user testnet
@@ -43,5 +47,3 @@ public:
 TestContext *new_kernel_test_context(Trafficmon &trafficmon);
 #endif
 TestContext *new_user_test_context();
-
-// please write the prototypes of the below functions

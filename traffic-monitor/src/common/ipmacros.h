@@ -44,10 +44,12 @@
 
 // defined in iplookup
 #define GET_IPSTATUS VCALL(__GET_IPSTATUS, IP_VERSION)
-#define DISPATCH_QUEUE VCALL(__DISPATCH_QUEUE, IP_VERSION)
 #define ENQUEUE_PACKET VCALL(__ENQUEUE_PACKET, IP_VERSION)
 #define GET_ENQUEUED_COUNT VCALL(__GET_ENQUEUED_COUNT, IP_VERSION)
 #define IP_RESET VCALL(__IP_RESET, IP_VERSION)
+
+// defined in nethooks
+#define DISPATCH_QUEUE VCALL(__DISPATCH_QUEUE, IP_VERSION)
 
 // refs to automatically defined types & functions
 #define SETSTATUS_PAYLOAD_T VCAT(VCAT(struct SetStatus, IP_VERSION), Payload)

@@ -13,13 +13,15 @@ void Trafficmon::handle(int rv)
 Trafficmon::Trafficmon()
 {
 // open the proc files
-#define ENTRY(name) write_fd[WriteMessageType::name] = \
-                        open("/proc/" TRAFFICMON_PROC_FILE "/" #name, O_WRONLY);
+#define ENTRY(name)                    \
+    write_fd[WriteMessageType::name] = \
+        open("/proc/" TRAFFICMON_PROC_FILE "/" #name, O_WRONLY);
     WRITE_MESSAGES
 #undef ENTRY
 
-#define ENTRY(name) read_fd[ReadMessageType::name] = \
-                        open("/proc/" TRAFFICMON_PROC_FILE "/" #name, O_RDONLY);
+#define ENTRY(name)                  \
+    read_fd[ReadMessageType::name] = \
+        open("/proc/" TRAFFICMON_PROC_FILE "/" #name, O_RDONLY);
     READ_MESSAGES
 #undef ENTRY
 

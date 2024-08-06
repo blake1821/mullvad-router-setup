@@ -35,20 +35,24 @@ Messaging protocol:
 
 #ifdef TEST_NETHOOKS
 
+// todo: fix DECLARATION(...)
 #define DECLARATION_TF(name) DECLARATION(int, CONCAT(name, _queue_size), 0)
 #define DEBUG_PARAMS                       \
     DECLARATION(int, verdict_responses, 0) \
     DECLARATION(int, enqueued_ipv4, 0)     \
     DEFAULT_READ_MESSAGES
 
-#define READ_MESSAGES     \
-    DEFAULT_READ_MESSAGES \
-    ENTRY(TestVerdict4)   \
+#define _VERDICT_MESSAGE(v) ENTRY(TestVerdict##v)
+#define _TEST_PACKET_MESSAGE(v) ENTRY(TestPacket##v)
+#define READ_MESSAGES                    \
+    DEFAULT_READ_MESSAGES                \
+    APPLY(_VERDICT_MESSAGE, IP_VERSIONS) \
     ENTRY(DebugResponse)
-#define WRITE_MESSAGES     \
-    DEFAULT_WRITE_MESSAGES \
-    ENTRY(TestPacket4)     \
+#define WRITE_MESSAGES                       \
+    DEFAULT_WRITE_MESSAGES                   \
+    APPLY(_TEST_PACKET_MESSAGE, IP_VERSIONS) \
     ENTRY(DebugRequest)
+
 #else
 #define READ_MESSAGES DEFAULT_READ_MESSAGES
 #define WRITE_MESSAGES DEFAULT_WRITE_MESSAGES
@@ -61,23 +65,22 @@ typedef enum
     Pending
 } IPStatus;
 
+#define PROTOCOL_LIST TCP, UDP, Other
+#define _PROTO_ENUM(name) Proto##name,
 typedef enum
 {
-    ProtoTcp,
-    ProtoUdp,
-    ProtoOther
+    APPLY(_PROTO_ENUM, PROTOCOL_LIST)
 } ConnectProtocol;
+#undef _PROTO_ENUM
 
 // read() messages
 APPLY(DECLARE_CONNECT_STRUCT, IP_VERSIONS)
 APPLY(DECLARE_QUERY_STRUCT, IP_VERSIONS)
 
 #ifdef TEST_NETHOOKS
-struct TestVerdict4Payload
-{
-    struct Connect4Payload conn;
-    bool allowed;
-};
+#define _TEST_VERDICT_STRUCT(v) struct TestVerdict##v##Payload { struct Connect##v##Payload conn; bool allowed; };
+APPLY(_TEST_VERDICT_STRUCT, IP_VERSIONS)
+#undef _TEST_VERDICT_STRUCT
 
 struct DebugResponsePayload
 {
@@ -105,10 +108,9 @@ struct ResetPayload
 };
 
 #ifdef TEST_NETHOOKS
-struct TestPacket4Payload
-{
-    struct Connect4Payload conn;
-};
+#define _TEST_PACKET_STRUCT(v) struct TestPacket##v##Payload { struct Connect##v##Payload conn; };
+APPLY(_TEST_PACKET_STRUCT, IP_VERSIONS)
+#undef _TEST_PACKET_STRUCT
 
 struct DebugRequestPayload
 {

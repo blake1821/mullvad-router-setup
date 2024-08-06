@@ -1,5 +1,9 @@
 #pragma once
-#define I(x) x // identity
+#include "macro-stack.h"
+
+#define _NOEXPAND(x, ...) __VA_ARGS__##x
+#define I(...) __VA_ARGS__         // identity
+#define TUPLE_I(...) (__VA_ARGS__) // tuple identity
 #define CONCAT(x, y) x##y
 #define VCAT(x, y) CONCAT(x, y)
 #define VCALL(fn, ...) fn(__VA_ARGS__)
@@ -140,7 +144,7 @@
 //          #define MyUnion BASED_UNION(BaseType, SubType1, SubType2, ...)
 //           -- or --
 //          #define MyUnion UNION(SubType1, SubType2, ...)
-//    
+//
 //          The BaseType is useful when all subtypes are child classes of a base class.
 //          For example, consider BASED_UNION(IPAddress, IPv4Address, IPv6Address)
 //      Then, make the type visible to the compiler:
@@ -156,6 +160,7 @@
 //
 // Matching on the union:
 //      match(MyUnion, u, v,
+//        cases,
 //        (SubType1, {
 //           v.a = 432;
 //           ...
@@ -172,60 +177,69 @@
 //      This makes it about as safe as Rust's match statement.
 //
 //  Warnings:
-//      - 
+//    - The number of times you can use DECLARE_UNION and match() in a compilation unit is limited
+//      by the number of entries on the _BINARY_COND stack. (See macro-stack.h)
+//    - Nesting match() statements or union names within match statements is not allowed for now.
 
-// In some macros below, we exploit the fact that recursive macro calls are not expanded by the preprocessor.
-// By using match to call _UNION_T in BASED_UNION, we can prevent match() from expanding the _UNION_T macro.
-// This is needed so that we can effectively use a Union type's macro name as a type,
-// and then use that macro name in the match() statement.
-
-// _IF_MATCH_THEN(key, lock, Y, N) -> Y if _key_lock is defined, N otherwise
-#define _backdoorkey_backdoorlock ,
+// _IF_MATCH_THEN(key, lock, Y, N) -> Y if _key_lock is defined (as a comma), N otherwise
+#define _key1_lock1 ,
 #define _IF_MATCH_SUB2(_1, _2, C, ...) C
 #define _IF_MATCH_SUB(x, Y, N) _IF_MATCH_SUB2(x, Y, N)
 #define _IF_MATCH_THEN(key, lock, Y, N) _IF_MATCH_SUB(_##key##_##lock, Y, N)
+
+#define _UNION_TYPENAME(BaseType, ...) XCAT(Union_, __VA_ARGS__)
 #define _UNION_ENUM(x) __Type_##x,
 #define _UNION_UNION(x) x _##x;
+#define _UNION_CONSTRUCTOR_ARGS(SubType) (const SubType &s)
 #define _UNION_CONSTRUCTOR1(typename, SubType) \
-    typename(const SubType &s) : _internal_as{._##SubType{s}}, _internal_type{__Type_##SubType} {}
+    typename _UNION_CONSTRUCTOR_ARGS(SubType) : _internal_as{._##SubType{s}}, _internal_type{__Type_##SubType} {}
 #define _UNION_CONSTRUCTOR(typename_SubType) _UNION_CONSTRUCTOR1 typename_SubType
 #define _UNION_ID(...) XCAT(__uid_, __VA_ARGS__)
-#define BASED_UNION(BaseType, ...) match(backdoorkey, _UNION_T, BaseType, __VA_ARGS__)
+#define _BASED_UNION_SUB2(bc, ...) _IF_MATCH_THEN(key##bc, lock1, TUPLE_I, _UNION_TYPENAME)(__VA_ARGS__)
+#define _BASED_UNION_SUB1(bc, ...) _BASED_UNION_SUB2(bc, __VA_ARGS__)
+#define BASED_UNION(...) _BASED_UNION_SUB1(_BINARY_COND, __VA_ARGS__)
 typedef struct
 {
 } EmptyStruct;
 #define UNION(...) BASED_UNION(EmptyStruct, __VA_ARGS__)
-#define _UNION_T(BaseType, ...) XCAT(Union_, __VA_ARGS__)
-#define _defmatch(_1, _2, BaseType, ...)                                       \
-    struct _UNION_T(BaseType, __VA_ARGS__)                                     \
-    {                                                                          \
-        APPLY(                                                                 \
-            _UNION_CONSTRUCTOR,                                                \
-            PREPEND(_UNION_T(BaseType, __VA_ARGS__), __VA_ARGS__))             \
-        enum                                                                   \
-        {                                                                      \
-            _UNION_ID(__VA_ARGS__),                                            \
-            APPLY(_UNION_ENUM, __VA_ARGS__)                                    \
-        } _internal_type;                                                      \
-        union                                                                  \
-        {                                                                      \
-            APPLY(_UNION_UNION, __VA_ARGS__)                                   \
-        } _internal_as;                                                        \
-        inline BaseType &const base() { return *((BaseType *)&_internal_as); } \
+#define _DECLARE_UNION_SUB3(Typename, BaseType, ...)                     \
+    struct Typename                                                      \
+    {                                                                    \
+        Typename(const Typename &t) : _internal_type{t._internal_type},  \
+                                      _internal_as{.__init_only{0}}      \
+        {                                                                \
+            memcpy(this, &t, sizeof(Typename));                          \
+        }                                                                \
+        APPLY(                                                           \
+            _UNION_CONSTRUCTOR,                                          \
+            PREPEND(Typename, __VA_ARGS__))                              \
+        enum                                                             \
+        {                                                                \
+            _UNION_ID(__VA_ARGS__),                                      \
+            APPLY(_UNION_ENUM, __VA_ARGS__)                              \
+        } _internal_type;                                                \
+        union _Internal_U                                                \
+        {                                                                \
+            char __init_only;                                            \
+            APPLY(_UNION_UNION, __VA_ARGS__)                             \
+        } _internal_as;                                                  \
+        inline BaseType &base() { return *((BaseType *)&_internal_as); } \
+        Typename &operator=(const Typename &t)                           \
+        {                                                                \
+            memcpy(this, &t, sizeof(Typename));                          \
+            return *this;                                                \
+        }                                                                \
     }
-#define _UNION_DEF(CallExp, _2) _def##CallExp
-#define DECLARE_UNION(UnionName) match(backdoorkey, _UNION_DEF, ##UnionName)
-#define UNION_INIT(SubType, v)              \
-    {                                       \
-        ._internal_type = __Type_##SubType; \
-        ._internal_as._##SubType = v;       \
-    }
-#define _MATCHCASESUB3(u, v, SubType, ...)           \
-    case u.__Type_##SubType:                         \
-    {                                                \
-        SubType const v = u._internal_as._##SubType; \
-        __VA_ARGS__                                  \
-    }                                                \
+#define _DECLARE_UNION_SUB2(UnionName, TupleExp) _DECLARE_UNION_SUB3(UnionName, TupleExp)
+#define _DECLARE_UNION_SUB(UnionName) _Pragma("pop_macro(\"_BINARY_COND\")") _DECLARE_UNION_SUB2(_UNION_TYPENAME UnionName, UNPACK UnionName)
+#define DECLARE_UNION _Pragma("pop_macro(\"_BINARY_COND\")") _DECLARE_UNION_SUB
+
+#define _MATCHCASESUB3(u, v, SubType, ...)     \
+    case u.__Type_##SubType:                   \
+    {                                          \
+        SubType v = u._internal_as._##SubType; \
+        __VA_ARGS__                            \
+    }                                          \
     break;
 #define _MATCHCASESUB2(exp1, exp2) _MATCHCASESUB3(exp1, exp2)
 #define _MATCHCASESUB1(uv, matchcase) _MATCHCASESUB2(UNPACK uv, UNPACK matchcase)
@@ -242,17 +256,18 @@ typedef struct
         APPLY(_MATCHMAKESTATIC, __VA_ARGS__)      \
         APPLY(_MATCHCHECKSTATIC, UNPACK SubTypes) \
     }
-#define _MATCHCHECK(CallExp, u, ...) _MATCHCHECKSUB0((CallExp), u, __VA_ARGS__)
-#define _ex_match(key, _f, _base, ...) __VA_ARGS__
-#define _MATCHSUB2(CallExp, u, v, ...)                  \
+#define _REMOVE_FIRST(x, ...) (__VA_ARGS__)
+#define _MATCHCHECK(CallExp, u, ...) _MATCHCHECKSUB0(CallExp, u, __VA_ARGS__)
+#define _MATCH_SUB2(UnionExp, u, v, ...)                \
     switch (u._internal_type)                           \
     {                                                   \
         APPLY(_MATCHCASE, PREPEND((u, v), __VA_ARGS__)) \
     }                                                   \
-    _MATCHCHECK(_ex_##CallExp, u, __VA_ARGS__);
-#define _CALL_SECOND(_1, fn, ...) fn(__VA_ARGS__)
-#define _MATCHSUB(key, ...) _IF_MATCH_THEN(key, backdoorlock, _CALL_SECOND, _MATCHSUB2)(key, __VA_ARGS__)
-#define match(key, _2, _3, ...) _MATCHSUB(##key, ##_2, ##_3, __VA_ARGS__)
+    _MATCHCHECK(_REMOVE_FIRST UnionExp, u, __VA_ARGS__);
+#define _MATCH_SUB1(UnionExp, u, v, ...) \
+    _MATCH_SUB2(UnionExp, u, v, __VA_ARGS__)
+#define _MATCH_SUB(UnionName, u, v) \
+    _Pragma("pop_macro(\"_BINARY_COND\")");\
+    _MATCH_SUB1(UnionName, u, v, 
 
-#define MyUnion UNION(int, float)
-DECLARE_UNION(MyUnion);
+#define match _Pragma("pop_macro(\"_BINARY_COND\")") _MATCH_SUB

@@ -1,7 +1,7 @@
-#include "test-context.h"
 #include <queue>
-#include <map>
-#include <set>
+#include <unordered_map>
+#include <unordered_set>
+#include "test-context.h"
 #include "test-generator.h"
 extern "C"
 {
@@ -11,68 +11,40 @@ extern "C"
 
 using namespace std;
 
-static VirtualMessageHandler *handler;
-map<uint64_t, Connect4Payload> pending_connects;
-queue<Query4Payload> pending_queries;
-set<uint64_t> rules_it_queried;
-map<uint64_t, Query4Payload> expected_queries;
-int mallocs = 0;
-
-void enqueue_Query4(struct Query4Payload *payload)
-{
-    pending_queries.push(*payload);
-
-    // delete from expected queries, if it exists
-    auto key = get_ip_pair_key(payload->src, payload->dst);
-    if (expected_queries.find(key) != expected_queries.end())
-    {
-        expected_queries.erase(key);
-    }
-    rules_it_queried.insert(key);
-}
-
-void dispatch_queue4(struct list_head *head, IPStatus status)
-{
-    while (head != NULL)
-    {
-        Connect4Payload *payload = (Connect4Payload *)head->data;
-        uint64_t key = get_conn_key(*payload);
-        if (pending_connects.find(key) != pending_connects.end())
-        {
-            handler->handle_verdict(*payload, status);
-            pending_connects.erase(key);
-        }
-        else
-        {
-            throw runtime_error("Key not found in pending connects");
-        }
-        struct list_head *old = head;
-        head = head->next;
-        delete old;
-        mallocs--;
-    }
-}
-
 class UserTestContext : public TestContext
 {
 private:
-    queue<Connect4Payload> connection_queue;
+    queue<Connection> connection_queue;
+    VirtualMessageHandler *handler;
+    unordered_map<uint64_t, Connection> pending_connects;
+    queue<IPQuery> pending_queries;
+    unordered_set<uint64_t> rules_it_queried;
+    unordered_set<uint64_t> expected_queries;
+    int mallocs = 0;
 
 public:
-    void send_packet(struct Connect4Payload &payload) override
+    void send_packet(Connection &connection) override
     {
-        connection_queue.push(payload);
+        connection_queue.push(connection);
     }
 
-    void send_status(struct SetStatus4Payload &payload) override
+    void send_status(IPRule &rule) override
     {
-        rules_it_queried.insert(get_ip_pair_key(payload.src, payload.dst));
-        on_SetStatus4(&payload, 1);
+        rules_it_queried.insert(rule.base().get_key());
+        match(IPRule, rule, v)
+        (IPv4Rule, {
+            SetStatus4Payload payload = v.to_set_status_payload();
+            on_SetStatus4(&payload, 1);
+        }),
+        (IPv6Rule, {
+            SetStatus6Payload payload = v.to_set_status_payload();
+            on_SetStatus6(&payload, 1);
+        }));
     }
 
     void start_reading(VirtualMessageHandler *handler) override
     {
-        ::handler = handler;
+        this->handler = handler;
     }
 
     void stop_reading() override
@@ -89,31 +61,47 @@ public:
             int packets = min(rand() % 10, (int)connection_queue.size());
             for (int i = 0; i < packets; i++)
             {
-                Connect4Payload conn = connection_queue.front();
+                auto conn = connection_queue.front();
                 connection_queue.pop();
 
-                if (rules_it_queried.find(get_ip_pair_key(conn.src, conn.dst)) == rules_it_queried.end())
+                if (rules_it_queried.find(conn.base().get_key()) == rules_it_queried.end())
                 {
-                    expected_queries[get_ip_pair_key(conn.src, conn.dst)] = Query4Payload{conn.src, conn.dst};
+                    expected_queries.insert(conn.base().get_key());
                 }
 
                 uint16_t queue_no;
-                IPStatus status = ipv4_get_status(conn.src, conn.dst, &queue_no);
+                IPStatus status;
+                match(Connection, conn, v)
+                (IPv4Connection, {
+                    status = ipv4_get_status(v.src.addr, v.dst.addr, &queue_no);
+                }),
+                (IPv6Connection, {
+                    status = ipv6_get_status(v.src.addr, v.dst.addr, &queue_no);
+                }));
 
                 if (status == Pending)
                 {
-                    uint64_t key = get_conn_key(conn);
-                    pending_connects[key] = conn;
+                    uint64_t key = conn.base().get_conn_key();
+                    pending_connects.emplace(key, conn);
 
                     list_head *head = new list_head();
-                    head->data = &pending_connects[key];
+                    head->data = &pending_connects.at(key);
                     mallocs++;
-                    if (!ipv4_enqueue_packet(head, queue_no, conn.src, conn.dst))
-                        throw runtime_error("Failed to enqueue ipv4");
+
+                    match(Connection, conn, v)
+                    (IPv4Connection, {
+                        if (!ipv4_enqueue_packet(head, queue_no, v.src.addr, v.dst.addr))
+                            throw runtime_error("Failed to enqueue ipv4");
+                    }),
+                    (IPv6Connection, {
+                        if (!ipv6_enqueue_packet(head, queue_no, v.src.addr, v.dst.addr))
+                            throw runtime_error("Failed to enqueue ipv6");
+                    }));
                 }
                 else
                 {
-                    handler->handle_verdict(conn, status);
+                    Verdict verdict(conn, status == Allowed);
+                    handler->handle_verdict(verdict);
                 }
             }
 
@@ -121,9 +109,9 @@ public:
             int queries = min(rand() % 10, (int)pending_queries.size());
             for (int i = 0; i < queries; i++)
             {
-                Query4Payload payload = pending_queries.front();
+                IPQuery query = pending_queries.front();
                 pending_queries.pop();
-                handler->handle_query(payload);
+                handler->handle_query(query);
             }
         }
 
@@ -136,9 +124,69 @@ public:
     void debug() override
     {
     }
+
+    void enqueue_query(IPQuery &query)
+    {
+        pending_queries.push(query);
+
+        // delete from expected queries, if it exists
+        auto key = query.base().get_key();
+        if (expected_queries.find(key) != expected_queries.end())
+        {
+            expected_queries.erase(key);
+        }
+        rules_it_queried.insert(key);
+    }
+
+    void dispatch_queue(IPVersion version, struct list_head *head, IPStatus status)
+    {
+        while (head != NULL)
+        {
+            Connection &conn = *(Connection *)head->data;
+            uint64_t key = conn.base().get_conn_key();
+            if (pending_connects.find(key) != pending_connects.end())
+            {
+                Verdict verdict(conn, status == Allowed);
+                handler->handle_verdict(verdict);
+                pending_connects.erase(key);
+            }
+            else
+            {
+                throw runtime_error("Key not found in pending connects");
+            }
+            struct list_head *old = head;
+            head = head->next;
+            delete old;
+            mallocs--;
+        }
+    }
 };
+
+UserTestContext *the_context;
 
 TestContext *new_user_test_context()
 {
-    return new UserTestContext();
+    return the_context = new UserTestContext();
+}
+
+void enqueue_Query4(struct Query4Payload *payload)
+{
+    IPQuery query = IPv4Query(payload->src, payload->dst);
+    the_context->enqueue_query(query);
+}
+
+void enqueue_Query6(struct Query6Payload *payload)
+{
+    IPQuery query = IPv6Query(payload->src, payload->dst);
+    the_context->enqueue_query(query);
+}
+
+void ipv4_dispatch_queue(struct list_head *head, IPStatus status)
+{
+    the_context->dispatch_queue(IPv4, head, status);
+}
+
+void ipv6_dispatch_queue(struct list_head *head, IPStatus status)
+{
+    the_context->dispatch_queue(IPv6, head, status);
 }

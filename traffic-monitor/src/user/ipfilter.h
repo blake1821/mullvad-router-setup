@@ -1,18 +1,50 @@
+#pragma once
 #include "trafficmon.h"
 #include "reading-thread.h"
 #include <mutex>
 #include <map>
-#include <set>
-#include "data/iprule.h"
+#include <unordered_set>
 #include "data/connection.h"
-
+#include "data/iprule.h"
 
 class FilterHandler
 {
 public:
-    virtual void handle_connection(Connection &conn) = 0;
+    virtual void handle_verdict(Verdict &verdict) = 0;
 };
 
+template <IPVersion V>
+class MonoIPFilter
+{
+private:
+    unordered_set<IPRuleConcrete<V>, IPPairHashFunction> allowed;
+
+public:
+    using T = typename IPProps<V>::Address;
+    void add_rule(IPRuleConcrete<V> &rule)
+    {
+        if (rule.is_allowed())
+        {
+            allowed.insert(rule);
+        }
+        else
+        {
+            IPRuleConcrete<V> rule2(rule.src, rule.dst, true);
+            allowed.erase(rule);
+        }
+    }
+
+    void clear_rules()
+    {
+        allowed.clear();
+    }
+
+    bool is_allowed(T src, T dst)
+    {
+        auto it = allowed.find(IPRuleConcrete<V>(src, dst, true));
+        return it != allowed.end();
+    }
+};
 
 #define IPFilterReadMessages PAIRAPPLYCOMMA(CONCAT, (IP_VERSIONS), Query, Connect)
 
@@ -32,11 +64,9 @@ private:
     APPLY(_DECLARE_IP_READER_THREAD, IPFilterReadMessages)
 #undef _DECLARE_IP_READER_THREAD
 
-#define _MAKE_IP_MEMBERS(version)   \
-    set<uint64_t> allowed##version; \
-    mutex rules_mutex##version;
-    APPLY(_MAKE_IP_MEMBERS, IP_VERSIONS)
-#undef _MAKE_IP_MEMBERS
+    MonoIPFilter<IPv4> filter4;
+    MonoIPFilter<IPv6> filter6;
+    mutex rules_mutex;
     FilterHandler *handler;
     string ifname;
 
@@ -45,7 +75,7 @@ protected:
 
 public:
     IPFilter(string ifname, FilterHandler *handler);
-    void add_rules(vector<SetStatus4Payload> &rules);
+    void add_rules(vector<IPRule> &rules);
     void clear_rules();
     void kill();
     void join();

@@ -13,14 +13,9 @@ int main(int argc, char *argv[])
 
     class CliHandler : FilterHandler
     {
-        void handle_connection(Connect4Payload &conn, bool allowed)
+        void handle_verdict(Verdict &verdict)
         {
-            char src_str[128];
-            char dst_str[128];
-            inet_ntop(AF_INET, &conn.src, src_str, 128);
-            inet_ntop(AF_INET, &conn.dst, dst_str, 128);
-
-            cout << "Connection from " << src_str << " to " << dst_str << " is " << (allowed ? "allowed" : "blocked") << endl;
+            cout << verdict.to_string() << endl;
         }
     };
 
@@ -59,12 +54,11 @@ int main(int argc, char *argv[])
         cin >> response;
         bool allow = response[0] == 'Y' || response[0] == 'y';
 
-        SetStatus4Payload payload = {
-            .src = src,
-            .dst = dst,
-            .status = allow ? Allowed : Blocked};
+        vector<IPRule> rules{IPv4Rule(
+            IPv4Address(src),
+            IPv4Address(dst),
+            allow)};
 
-        vector<SetStatus4Payload> rules{payload};
         ip_filter.add_rules(rules);
     }
 

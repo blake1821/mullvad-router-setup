@@ -1,5 +1,5 @@
 // Uncomment this to debug:
-// #define IP_VERSION 4
+//#define IP_VERSION 6
 
 #include "iplookup.h"
 #include "debug.h"
@@ -24,9 +24,11 @@
 #define smp_rmb()
 #endif
 
+#ifdef __KERNEL__ 
 static DEFINE_MUTEX(data_mutex);
+#endif
 
-static struct StatusFrame
+struct StatusFrame
 {
     IP_ADDR_T src;
     IP_ADDR_T dst;
@@ -59,7 +61,7 @@ static int status_queue_index = 0;
 static int16_t hash_table[1 << H_BITS] = {[0 ... H_MASK] = EMPTY};
 static int tombstone_count = 0;
 
-inline int16_t ipv6_hash(struct in6_addr ipv6)
+static inline int16_t ipv6_hash(struct in6_addr ipv6)
 {
     int16_t hash = 0;
     for (int i = 0; (i & 128) == 0; i += 16)
@@ -69,7 +71,7 @@ inline int16_t ipv6_hash(struct in6_addr ipv6)
     return hash & H_MASK;
 }
 
-static struct lookup_data
+struct lookup_data
 {
     int16_t hash;
     int16_t h2;
@@ -278,10 +280,6 @@ bool ENQUEUE_PACKET(struct list_head *node, uint16_t queue_no, IP_ADDR_T expecte
 
 // TODO: IPStatus get_ipv6_status(struct in6_addr ipv6);
 
-void init_iplookup(void)
-{
-}
-
 void IP_RESET()
 {
     mutex_lock(&data_mutex);
@@ -292,7 +290,7 @@ void IP_RESET()
         if (status_queue[q_index].slot > EMPTY &&
             status_queue[q_index].status == Pending)
         {
-            dispatch_queue4(grab_queue(&status_queue[q_index]), Blocked);
+            DISPATCH_QUEUE(grab_queue(&status_queue[q_index]), Blocked);
         }
 
         status_queue[q_index].slot = EMPTY;
