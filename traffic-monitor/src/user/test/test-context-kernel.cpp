@@ -21,6 +21,7 @@ public:
         for (int i = 0; i < count; i++)
         {
             IPQuery query = IPv4Query(payloads[i].src, payloads[i].dst);
+            //cout << "received query: " << query.base().to_string() << endl;
             handler->handle_query(query);
         }
     }
@@ -41,6 +42,7 @@ public:
             Verdict verdict = Verdict(
                 IPv4Connection(payloads[i].conn.src, payloads[i].conn.dst, payloads[i].conn.dst_port, payloads[i].conn.protocol),
                 payloads[i].allowed);
+            //cout << "received verdict: " << verdict.to_string() << endl;
             handler->handle_verdict(verdict);
         }
     }
@@ -73,6 +75,7 @@ public:
 
     void send_packet(Connection &conn) override
     {
+        //cout << "sending packet " << conn.base().to_string() << endl;
         match(Connection, conn, v)
         (IPv4Connection, {
             struct TestPacket4Payload packet = {
@@ -90,6 +93,7 @@ public:
 
     void send_status(IPRule &rule) override
     {
+        //cout << "sending rule " << rule.base().to_string() << endl;
         match(IPRule, rule, v)
         (IPv4Rule, {
             struct SetStatus4Payload payload = v.to_set_status_payload();

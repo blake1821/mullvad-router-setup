@@ -14,7 +14,7 @@ extern "C"
 }
 #include "../reading-thread.h"
 
-#define KERNEL_TEST 0
+#define KERNEL_TEST 1
 
 using namespace std;
 
@@ -187,10 +187,10 @@ int main()
         1                 // expected_cache_misses
     );
 
-    /* These take too long. Let's delete them for now.
     run_test(
         context,          // TestContext
         10,               // test_session_count
+        IPv4,
         1,                // src_count
         100,              // dst_count
         10,               // rule_count
@@ -199,12 +199,11 @@ int main()
         1000,             // num_rounds
         10                // expected_cache_misses
     );
-    */
 
     run_test(
         context,          // TestContext
         2,                // test_session_count
-        IPv6,             // version
+        IPv4,             // version
         3,                // src_count
         100,              // dst_count
         100,              // rule_count
@@ -230,7 +229,7 @@ int main()
     run_test(
         context,              // TestContext
         1,                    // test_session_count
-        IPv6,                 // version
+        IPv4,                 // version
         100,                  // src_count
         1000,                 // dst_count
         1000,                 // rule_count

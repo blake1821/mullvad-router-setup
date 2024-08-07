@@ -16,7 +16,7 @@ struct list_head
 #define TRAFFICMON_PROC_FILE "trafficmon"
 #define MAX_MESSAGE_SIZE 4096
 
-// #define TEST_NETHOOKS
+#define TEST_NETHOOKS
 
 /*
 Messaging protocol:
@@ -37,9 +37,10 @@ Messaging protocol:
 
 // todo: fix DECLARATION(...)
 #define DECLARATION_TF(name) DECLARATION(int, CONCAT(name, _queue_size), 0)
+#define _DEC_TF_ENQ_IP(v) DECLARATION(int, ipv##v##_enqueued, 0)
 #define DEBUG_PARAMS                       \
     DECLARATION(int, verdict_responses, 0) \
-    DECLARATION(int, enqueued_ipv4, 0)     \
+    APPLY(_DEC_TF_ENQ_IP, IP_VERSIONS)     \
     DEFAULT_READ_MESSAGES
 
 #define _VERDICT_MESSAGE(v) ENTRY(TestVerdict##v)

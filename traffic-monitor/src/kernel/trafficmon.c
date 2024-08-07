@@ -16,11 +16,6 @@ MODULE_AUTHOR("blake1821");
 MODULE_DESCRIPTION("Trafficmon");
 MODULE_LICENSE("GPL"); // Custom init and exit methods
 
-void on_SetStatus6(struct SetStatus6Payload *payloads, int count)
-{
-    // todo
-    return;
-}
 
 // Custom init and exit methods
 static int __init custom_init(void)

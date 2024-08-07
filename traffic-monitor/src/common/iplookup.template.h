@@ -253,16 +253,16 @@ IPStatus GET_IPSTATUS(IP_ADDR_T src, IP_ADDR_T dst, uint16_t *queue_no)
 
 bool ENQUEUE_PACKET(struct list_head *node, uint16_t queue_no, IP_ADDR_T expected_src, IP_ADDR_T expected_dst)
 {
-    struct StatusFrame *frame = &status_queue[queue_no];
+    volatile struct StatusFrame *frame = &status_queue[queue_no];
 
     struct list_head *head;
     struct list_head *old_head;
     do
     {
-        old_head = READ_ONCE(frame->head);
+        old_head = frame->head;
         smp_rmb();
-        IP_ADDR_T src = READ_ONCE(frame->src);
-        IP_ADDR_T dst = READ_ONCE(frame->dst);
+        IP_ADDR_T src = frame->src;
+        IP_ADDR_T dst = frame->dst;
         if (!IP_EQ(src, expected_src) || !IP_EQ(dst, expected_dst))
         {
             return false;

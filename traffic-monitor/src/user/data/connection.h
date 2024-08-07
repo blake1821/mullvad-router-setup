@@ -39,10 +39,10 @@ public:
     inline IPProps<V>::ConnectPayload to_connect_payload() const
     {
         return typename IPProps<V>::ConnectPayload{
-            .src = IPPairConcrete<V>::src.addr,
-            .dst = IPPairConcrete<V>::dst.addr,
             .dst_port = dst_port,
             .protocol = proto,
+            .src = IPPairConcrete<V>::src.addr,
+            .dst = IPPairConcrete<V>::dst.addr,
         };
     }
 

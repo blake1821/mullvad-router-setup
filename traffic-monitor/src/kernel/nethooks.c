@@ -19,16 +19,16 @@ static int queue_hook(struct nf_queue_entry *entry, unsigned int queuenum)
     if (entry->skb->protocol == htons(ETH_P_IP))
     {
         struct iphdr *iph = ip_hdr(entry->skb);
-        bool enqueued = ipv4_enqueue_packet(
+        enqueued = ipv4_enqueue_packet(
             &entry->list,
             queuenum,
-            (struct in_addr){.s_addr = iph->saddr},
-            (struct in_addr){.s_addr = iph->daddr});
+            (struct in_addr){.s_addr = ntohl(iph->saddr)},
+            (struct in_addr){.s_addr = ntohl(iph->daddr)});
     }
     else if (entry->skb->protocol == htons(ETH_P_IPV6))
     {
         struct ipv6hdr *ip6h = ipv6_hdr(entry->skb);
-        bool enqueued = ipv6_enqueue_packet(
+        enqueued = ipv6_enqueue_packet(
             &entry->list,
             queuenum,
             ip6h->addrs.saddr,
@@ -41,35 +41,62 @@ static int queue_hook(struct nf_queue_entry *entry, unsigned int queuenum)
     }
     else
     {
+        my_debug("queue_hook: enqueue failed\n");   // this is called!
         nf_reinject(entry, NF_DROP);
         return 0;
     }
 }
 
-static void dispatch_queue(struct list_head *head, IPStatus status)
-{
-    unsigned int verdict;
-    switch (status)
-    {
-    case Pending:
-    case Blocked:
-        verdict = NF_DROP;
-        break;
-    case Allowed:
-        verdict = NF_ACCEPT;
-        break;
+#define _DEFINE_DISPATCH_QUEUE(v)                                                           \
+    void __DISPATCH_QUEUE(v)(struct list_head * head, IPStatus status)                      \
+    {                                                                                       \
+        unsigned int verdict;                                                               \
+        switch (status)                                                                     \
+        {                                                                                   \
+        case Pending:                                                                       \
+        case Blocked:                                                                       \
+            verdict = NF_DROP;                                                              \
+            break;                                                                          \
+        case Allowed:                                                                       \
+            verdict = NF_ACCEPT;                                                            \
+            break;                                                                          \
+        }                                                                                   \
+        while (head != NULL)                                                                \
+        {                                                                                   \
+            struct nf_queue_entry *entry = container_of(head, struct nf_queue_entry, list); \
+            nf_reinject(entry, verdict);                                                    \
+            head = head->next;                                                              \
+        }                                                                                   \
     }
-    while (head != NULL)
+APPLY(_DEFINE_DISPATCH_QUEUE, IP_VERSIONS)
+#undef _DEFINE_DISPATCH_QUEUE
+
+static inline void translate_protocol(struct sk_buff *skb, uint8_t proto_in, ConnectProtocol *proto_out, uint16_t *port_out)
+{
+    union
     {
-        struct nf_queue_entry *entry = container_of(head, struct nf_queue_entry, list);
-        nf_reinject(entry, verdict);
-        head = head->next;
+        struct tcphdr *tcph;
+        struct udphdr *udph;
+    } u;
+
+    switch (proto_in)
+    {
+    case IPPROTO_TCP:
+        u.tcph = tcp_hdr(skb);
+        *proto_out = ProtoTCP;
+        *port_out = ntohs(u.tcph->dest);
+        break;
+    case IPPROTO_UDP:
+        u.udph = udp_hdr(skb);
+        *proto_out = ProtoUDP;
+        *port_out = ntohs(u.udph->dest);
+        break;
+    default:
+        *proto_out = ProtoOther;
+        *port_out = 0;
+        return;
     }
 }
-
-// for now we can use the same function for both ipv4 and ipv6
-void (*__DISPATCH_QUEUE(4))(struct list_head *head, IPStatus status) = dispatch_queue;
-void (*__DISPATCH_QUEUE(6))(struct list_head *head, IPStatus status) = dispatch_queue;
 
 static unsigned int nethook(void *priv,
                             struct sk_buff *skb,
@@ -87,18 +114,22 @@ static unsigned int nethook(void *priv,
             {
                 struct iphdr *iph = ip_hdr(skb);
                 struct Connect4Payload conn_payload = {
-                    .dst = {
-                        .s_addr = iph->daddr},
-                    .src = {.s_addr = iph->saddr}};
+                    .dst = {.s_addr = ntohl(iph->daddr)},
+                    .src = {.s_addr = ntohl(iph->saddr)},
+                };
+                translate_protocol(skb, iph->protocol, &conn_payload.protocol, &conn_payload.dst_port);
                 enqueue_Connect4(&conn_payload);
 
                 status = __GET_IPSTATUS(4)(conn_payload.src, conn_payload.dst, &queue_no);
-            }else if (skb->protocol == htons(ETH_P_IPV6))
+            }
+            else if (skb->protocol == htons(ETH_P_IPV6))
             {
                 struct ipv6hdr *ip6h = ipv6_hdr(skb);
                 struct Connect6Payload conn_payload = {
                     .dst = ip6h->addrs.daddr,
-                    .src = ip6h->addrs.saddr};
+                    .src = ip6h->addrs.saddr,
+                };
+                translate_protocol(skb, ip6h->nexthdr, &conn_payload.protocol, &conn_payload.dst_port);
                 enqueue_Connect6(&conn_payload);
 
                 status = __GET_IPSTATUS(6)(conn_payload.src, conn_payload.dst, &queue_no);

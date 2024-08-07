@@ -3,6 +3,11 @@
 
 class BaseQuery : public IPPair
 {
+public:
+    string to_string() const
+    {
+        return get_src()->to_string() + " -> " + get_dst()->to_string();
+    }
 };
 
 template <IPVersion V>

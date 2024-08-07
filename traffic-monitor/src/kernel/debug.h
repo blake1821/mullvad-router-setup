@@ -6,8 +6,9 @@
 #ifdef TEST_NETHOOKS
 #define my_debug(fmt, ...) printk(fmt, ##__VA_ARGS__)
 #define DBG(x) x
+void debug_incr_verdict_responses(void);
 #else
 #define my_debug(fmt, ...)
 #define DBG(x)
-#endif
 #define debug_incr_verdict_responses()
+#endif

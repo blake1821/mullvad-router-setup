@@ -86,7 +86,6 @@
         "stop_token": "cpp",
         "thread": "cpp",
         "test": "c",
-        "*.ctemplate": "cpp",
         "unordered_set": "cpp"
     }
 }
