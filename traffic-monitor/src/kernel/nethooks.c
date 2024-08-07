@@ -41,7 +41,7 @@ static int queue_hook(struct nf_queue_entry *entry, unsigned int queuenum)
     }
     else
     {
-        my_debug("queue_hook: enqueue failed\n");   // this is called!
+        debug_incr_enqueue_failures();
         nf_reinject(entry, NF_DROP);
         return 0;
     }
@@ -51,9 +51,11 @@ static int queue_hook(struct nf_queue_entry *entry, unsigned int queuenum)
     void __DISPATCH_QUEUE(v)(struct list_head * head, IPStatus status)                      \
     {                                                                                       \
         unsigned int verdict;                                                               \
+        DBG(bool pending = false);                                                          \
         switch (status)                                                                     \
         {                                                                                   \
         case Pending:                                                                       \
+            DBG(pending = true);                                                            \
         case Blocked:                                                                       \
             verdict = NF_DROP;                                                              \
             break;                                                                          \
@@ -63,6 +65,7 @@ static int queue_hook(struct nf_queue_entry *entry, unsigned int queuenum)
         }                                                                                   \
         while (head != NULL)                                                                \
         {                                                                                   \
+            DBG(if (pending) debug_incr_overflow_packets());                                \
             struct nf_queue_entry *entry = container_of(head, struct nf_queue_entry, list); \
             nf_reinject(entry, verdict);                                                    \
             head = head->next;                                                              \

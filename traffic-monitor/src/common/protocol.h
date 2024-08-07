@@ -37,10 +37,12 @@ Messaging protocol:
 
 // todo: fix DECLARATION(...)
 #define DECLARATION_TF(name) DECLARATION(int, CONCAT(name, _queue_size), 0)
-#define _DEC_TF_ENQ_IP(v) DECLARATION(int, ipv##v##_enqueued, 0)
+#define _IP_DEBUG_PARAMS(v) DECLARATION(int, ipv##v##_enqueued, 0)
 #define DEBUG_PARAMS                       \
     DECLARATION(int, verdict_responses, 0) \
-    APPLY(_DEC_TF_ENQ_IP, IP_VERSIONS)     \
+    DECLARATION(int, enqueue_failures, 0)  \
+    DECLARATION(int, overflow_packets, 0)  \
+    APPLY(_IP_DEBUG_PARAMS, IP_VERSIONS)   \
     DEFAULT_READ_MESSAGES
 
 #define _VERDICT_MESSAGE(v) ENTRY(TestVerdict##v)
@@ -79,7 +81,12 @@ APPLY(DECLARE_CONNECT_STRUCT, IP_VERSIONS)
 APPLY(DECLARE_QUERY_STRUCT, IP_VERSIONS)
 
 #ifdef TEST_NETHOOKS
-#define _TEST_VERDICT_STRUCT(v) struct TestVerdict##v##Payload { struct Connect##v##Payload conn; bool allowed; };
+#define _TEST_VERDICT_STRUCT(v)          \
+    struct TestVerdict##v##Payload       \
+    {                                    \
+        struct Connect##v##Payload conn; \
+        bool allowed;                    \
+    };
 APPLY(_TEST_VERDICT_STRUCT, IP_VERSIONS)
 #undef _TEST_VERDICT_STRUCT
 
@@ -109,7 +116,11 @@ struct ResetPayload
 };
 
 #ifdef TEST_NETHOOKS
-#define _TEST_PACKET_STRUCT(v) struct TestPacket##v##Payload { struct Connect##v##Payload conn; };
+#define _TEST_PACKET_STRUCT(v)           \
+    struct TestPacket##v##Payload        \
+    {                                    \
+        struct Connect##v##Payload conn; \
+    };
 APPLY(_TEST_PACKET_STRUCT, IP_VERSIONS)
 #undef _TEST_PACKET_STRUCT
 

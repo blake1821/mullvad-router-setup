@@ -28,6 +28,7 @@ private:
     mutex conn_map_mutex;
     int sent_count;
     int recv_count;
+    int packets_droped = 0;
 
 public:
     void handle_query(IPQuery &query) override
@@ -52,12 +53,16 @@ public:
         if (it != conn_map.end())
         {
             assert(it->second.first == verdict.is_allowed() || !verdict.is_allowed());
+            if(it->second.first != verdict.is_allowed()){
+                packets_droped++;
+            }
             it->second.second = true;
             recv_count++;
         }
         else
         {
-            assert(!verdict.is_allowed());
+            //assert(!verdict.is_allowed());
+            throw runtime_error("Unexpected verdict");
         }
         conn_map_mutex.unlock();
     }
@@ -122,6 +127,10 @@ public:
             cout << "send count: " << sent_count << ", recv count: " << recv_count << endl;
             context->debug();
         }
+        if(packets_droped > 0){
+            cout << "!! Packets droped: " << packets_droped << endl;
+            context->debug();
+        }
         for (auto [k, v] : conn_map)
         {
             assert(v.second);
@@ -177,7 +186,7 @@ int main()
     run_test(
         context,          // TestContext
         1,                // test_session_count
-        IPv4,             // version
+        IPv6,             // version
         1,                // src_count
         1,                // dst_count
         1,                // rule_count
@@ -190,7 +199,7 @@ int main()
     run_test(
         context,          // TestContext
         10,               // test_session_count
-        IPv4,
+        IPv4,             // version
         1,                // src_count
         100,              // dst_count
         10,               // rule_count
@@ -203,7 +212,7 @@ int main()
     run_test(
         context,          // TestContext
         2,                // test_session_count
-        IPv4,             // version
+        IPv6,             // version
         3,                // src_count
         100,              // dst_count
         100,              // rule_count
@@ -229,7 +238,7 @@ int main()
     run_test(
         context,              // TestContext
         1,                    // test_session_count
-        IPv4,                 // version
+        IPv6,                 // version
         100,                  // src_count
         1000,                 // dst_count
         1000,                 // rule_count

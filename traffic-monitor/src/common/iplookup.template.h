@@ -1,6 +1,3 @@
-// Uncomment this to debug:
-//#define IP_VERSION 6
-
 #include "iplookup.h"
 #include "debug.h"
 
@@ -24,7 +21,7 @@
 #define smp_rmb()
 #endif
 
-#ifdef __KERNEL__ 
+#ifdef __KERNEL__
 static DEFINE_MUTEX(data_mutex);
 #endif
 
@@ -64,9 +61,9 @@ static int tombstone_count = 0;
 static inline int16_t ipv6_hash(struct in6_addr ipv6)
 {
     int16_t hash = 0;
-    for (int i = 0; (i & 128) == 0; i += 16)
+    for (int i = 0; i < 8; ++i)
     {
-        hash ^= ipv6.s6_addr[i];
+        hash ^= ipv6.s6_addr16[i];
     }
     return hash & H_MASK;
 }
@@ -136,8 +133,8 @@ static struct list_head *grab_queue(struct StatusFrame *frame)
     /* set up the frame */                                                             \
     l.status_frame->slot = l.slot;                                                     \
     l.status_frame->used = 1;                                                          \
-    WRITE_ONCE(l.status_frame->src, src_);                                             \
-    WRITE_ONCE(l.status_frame->dst, dst_);                                             \
+    ((volatile struct StatusFrame *)l.status_frame)->src = src_;                       \
+    ((volatile struct StatusFrame *)l.status_frame)->dst = dst_;                       \
     /* set up the table entry */                                                       \
     *l.entry = l.h2 | status_queue_index;                                              \
     /* increment the status queue index */                                             \
@@ -268,8 +265,22 @@ bool ENQUEUE_PACKET(struct list_head *node, uint16_t queue_no, IP_ADDR_T expecte
             return false;
         }
         if (old_head == (struct list_head *)1)
-        { // overwritten
-            return false;
+        {
+            // the status has been updated since we last checked
+            // this is a very rare case, so it's safe to incur the cost of locking
+            mutex_lock(&data_mutex);
+            src = frame->src;
+            dst = frame->dst;
+            if(IP_EQ(src, expected_src) && IP_EQ(dst, expected_dst))
+            {
+                node->next = NULL;
+                DISPATCH_QUEUE(node, frame->status);
+                mutex_unlock(&data_mutex);
+                return true;
+            }else{
+                mutex_unlock(&data_mutex);
+                return false;
+            }
         }
         node->next = old_head;
         head = cmpxchg(&frame->head, old_head, node);
