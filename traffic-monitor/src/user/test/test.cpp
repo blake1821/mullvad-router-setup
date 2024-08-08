@@ -14,7 +14,7 @@ extern "C"
 }
 #include "../reading-thread.h"
 
-#define KERNEL_TEST 0
+#define KERNEL_TEST 1
 
 using namespace std;
 
@@ -47,7 +47,7 @@ public:
 
     void handle_verdict(Verdict &verdict) override
     {
-        uint64_t key = verdict.get_connection().base().get_key();
+        uint64_t key = verdict.get_connection().base().get_conn_key();
         conn_map_mutex.lock();
         auto it = conn_map.find(key);
         if (it != conn_map.end())
@@ -101,12 +101,12 @@ public:
                 Connection conn = UNINITIALIZED_CONNECTION;
                 match(IPRule, rule, v)
                 (IPv4Rule, {
-                    conn = IPv4Connection(v.src, v.dst, rand() % 65536, ProtoTCP);
+                    conn = IPv4Connection(v.src, v.dst, rand() % 65536, rand() % 2 ? ProtoTCP : ProtoUDP);
                 }),
                 (IPv6Rule, {
-                    conn = IPv6Connection(v.src, v.dst, rand() % 65536, ProtoTCP);
+                    conn = IPv6Connection(v.src, v.dst, rand() % 65536, rand() % 2 ? ProtoTCP : ProtoUDP);
                 }));
-                uint64_t key = conn.base().get_key();
+                uint64_t key = conn.base().get_conn_key();
                 conn_map_mutex.lock();
                 conn_map[key] = {rule.base().is_allowed(), false};
                 conn_map_mutex.unlock();
