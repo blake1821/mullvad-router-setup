@@ -22,8 +22,8 @@ static int queue_hook(struct nf_queue_entry *entry, unsigned int queuenum)
         enqueued = ipv4_enqueue_packet(
             &entry->list,
             queuenum,
-            (struct in_addr){.s_addr = ntohl(iph->saddr)},
-            (struct in_addr){.s_addr = ntohl(iph->daddr)});
+            (struct in_addr){.s_addr = iph->saddr},
+            (struct in_addr){.s_addr = iph->daddr});
     }
     else if (entry->skb->protocol == htons(ETH_P_IPV6))
     {
@@ -117,8 +117,8 @@ static unsigned int nethook(void *priv,
             {
                 struct iphdr *iph = ip_hdr(skb);
                 struct Connect4Payload conn_payload = {
-                    .dst = {.s_addr = ntohl(iph->daddr)},
-                    .src = {.s_addr = ntohl(iph->saddr)},
+                    .dst = {.s_addr = iph->daddr},
+                    .src = {.s_addr = iph->saddr},
                 };
                 translate_protocol(skb, iph->protocol, &conn_payload.protocol, &conn_payload.dst_port);
                 enqueue_Connect4(&conn_payload);

@@ -53,7 +53,8 @@ public:
         if (it != conn_map.end())
         {
             assert(it->second.first == verdict.is_allowed() || !verdict.is_allowed());
-            if(it->second.first != verdict.is_allowed()){
+            if (it->second.first != verdict.is_allowed())
+            {
                 packets_droped++;
             }
             it->second.second = true;
@@ -61,7 +62,6 @@ public:
         }
         else
         {
-            //assert(!verdict.is_allowed());
             throw runtime_error("Unexpected verdict");
         }
         conn_map_mutex.unlock();
@@ -127,7 +127,8 @@ public:
             cout << "send count: " << sent_count << ", recv count: " << recv_count << endl;
             context->debug();
         }
-        if(packets_droped > 0){
+        if (packets_droped > 0)
+        {
             cout << "!! Packets droped: " << packets_droped << endl;
             context->debug();
         }

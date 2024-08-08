@@ -71,8 +71,8 @@ struct iphdr iph_;
 
 struct iphdr *ip_hdr(struct sk_buff *skb){
     iph_ = (struct iphdr){
-        .saddr = htonl(skb->conn4.src.s_addr),
-        .daddr = htonl(skb->conn4.dst.s_addr),
+        .saddr = skb->conn4.src.s_addr,
+        .daddr = skb->conn4.dst.s_addr,
         .protocol = inv_translate_protocol(skb->conn4.protocol)
     };
     return &iph_;
