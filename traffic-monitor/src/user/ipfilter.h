@@ -68,13 +68,12 @@ private:
     MonoIPFilter<IPv6> filter6;
     mutex rules_mutex;
     FilterHandler *handler;
-    string ifname;
 
 protected:
     void set_enabled(bool enabled);
 
 public:
-    IPFilter(string ifname, FilterHandler *handler);
+    IPFilter(FilterHandler *handler);
     void add_rules(vector<IPRule> &rules);
     void clear_rules();
     void kill();

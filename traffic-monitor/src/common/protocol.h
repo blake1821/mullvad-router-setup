@@ -1,5 +1,7 @@
 #pragma once
 
+#include "global-vars.h"
+
 #ifdef __KERNEL__
 #include <net/inet_common.h>
 #else
@@ -108,7 +110,6 @@ APPLY(DECLARE_SETSTATUS_STRUCT, IP_VERSIONS)
 struct SetNfEnabledPayload
 {
     bool enabled;
-    char outgoing_dev_name[32];
 };
 
 struct ResetPayload

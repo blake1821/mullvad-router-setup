@@ -53,12 +53,10 @@ void IPFilter::set_enabled(bool enabled)
     struct SetNfEnabledPayload payload = {
         .enabled = enabled,
     };
-    strcpy(payload.outgoing_dev_name, ifname.c_str());
     trafficmon.write_message<SetNfEnabled>(payload);
 }
 
-IPFilter::IPFilter(string ifname, FilterHandler *handler)
-    : handler(handler)
+IPFilter::IPFilter(FilterHandler *handler) : handler(handler)
 {
 #define _START_READER_THREAD(message) \
     thr_##message.start(this, trafficmon);

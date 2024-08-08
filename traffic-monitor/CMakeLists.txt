@@ -57,6 +57,11 @@ endforeach()
 # Configure the kernel module Makefile
 configure_file(${KERNEL_DIR}/Makefile.in "kbuild-files/Makefile" @ONLY)
 
+add_custom_target(
+  pre-compile
+  COMMAND ${CMAKE_COMMAND} -E env bash ../pre-compile.sh
+)
+
 # Add the user executable
 foreach(executable ${USER_EXECUTABLES})
   # Extract the filename without extension to use as the executable name
@@ -80,6 +85,7 @@ foreach(executable ${USER_EXECUTABLES})
   # Add the executable with its specific source files
   set(CMAKE_BUILD_TYPE Debug)
   add_executable(${exec_name} ${current_exec_sources})
+  add_dependencies(${exec_name} pre-compile)
 
   # Set C++ standard
   set_property(TARGET ${exec_name} PROPERTY CXX_STANDARD 20)
@@ -95,6 +101,7 @@ add_custom_command(OUTPUT kbuild-files/${mod_name}.ko
   VERBATIM)
 
 add_custom_target(module DEPENDS kbuild-files/${mod_name}.ko)
+add_dependencies(module pre-compile)
 add_custom_target(module-clean COMMAND ${module_cmd} clean)
 
 # Post-build: Copy the kernel module to the build directory

@@ -109,7 +109,7 @@ static unsigned int nethook(void *priv,
     struct nf_conn *ct = nf_ct_get(skb, &ctinfo);
     if (ct != NULL)
     {
-        if (ctinfo == IP_CT_NEW)
+        if (ctinfo == IP_CT_NEW && ct->mark != PRIVILEGED_MARK)
         {
             uint16_t queue_no;
             IPStatus status = -1;
@@ -189,9 +189,6 @@ void on_SetNfEnabled(struct SetNfEnabledPayload *payloads, int count)
             my_debug("on_SetNfEnabled: hooks already enabled\n");
             return;
         }
-        struct net_device *dev = dev_get_by_name(&init_net, payloads[0].outgoing_dev_name);
-        ipv4_nfho.dev = dev;
-        ipv6_nfho.dev = dev;
         nf_register_net_hook(&init_net, &ipv4_nfho);
         nf_register_net_hook(&init_net, &ipv6_nfho);
         nf_register_queue_handler(&nfqh);

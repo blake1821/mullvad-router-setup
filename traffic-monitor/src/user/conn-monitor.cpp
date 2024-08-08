@@ -7,7 +7,6 @@ int main(){
     // enable
     SetNfEnabledPayload set_nf_enabled_payload = {
         .enabled = true,
-        .outgoing_dev_name = "wg0"
     };
     trafficmon.write_message<SetNfEnabled>(set_nf_enabled_payload);
 

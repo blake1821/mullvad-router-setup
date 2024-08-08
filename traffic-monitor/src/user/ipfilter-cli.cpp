@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 
     CliHandler handler;
 
-    IPFilter ip_filter("wg0", (FilterHandler *)&handler);
+    IPFilter ip_filter((FilterHandler *)&handler);
     ::ip_filter = &ip_filter;
 
     signal(SIGINT, sigint_handler);
