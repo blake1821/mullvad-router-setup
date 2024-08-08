@@ -29,7 +29,6 @@ public:
     }
     inline string to_string() const override
     {
-        struct in_addr addr;
         return inet_ntoa(addr);
     }
     inline bool operator==(const IPAddressBase &other) const override

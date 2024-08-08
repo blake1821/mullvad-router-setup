@@ -17,7 +17,7 @@ struct list_head
 #define TRAFFICMON_PROC_FILE "trafficmon"
 #define MAX_MESSAGE_SIZE 2000
 
-#define TEST_NETHOOKS
+// #define TEST_NETHOOKS
 
 /*
 Messaging protocol:
