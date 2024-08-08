@@ -11,6 +11,7 @@
 #include <cassert>
 #include "data/ipprops.h"
 
+
 using namespace std;
 
 template <WriteMessageType>

@@ -4,6 +4,7 @@
 #include <net/inet_common.h>
 #else
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <stdbool.h>
 struct list_head
 {
