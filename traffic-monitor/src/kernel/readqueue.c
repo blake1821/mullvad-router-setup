@@ -2,7 +2,7 @@
 #include "debug.h"
 #include <linux/circ_buf.h>
 
-#define BUFFER_SIZE (1 << 12)
+#define BUFFER_SIZE (1 << 8)
 #define BUFFER_MASK (BUFFER_SIZE - 1)
 
 #define ENTRY(name)                                                                                                              \

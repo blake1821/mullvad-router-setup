@@ -14,7 +14,7 @@ struct list_head
 #include "ipmacros.h"
 
 #define TRAFFICMON_PROC_FILE "trafficmon"
-#define MAX_MESSAGE_SIZE 4096
+#define MAX_MESSAGE_SIZE 2000
 
 #define TEST_NETHOOKS
 
