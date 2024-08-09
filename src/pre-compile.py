@@ -4,12 +4,16 @@ from trafficmon.globals import TrafficmonGlobals
 
 TRAFFICMON_CONIFG_FILENAME = "traffic-monitor/src/common/global-vars.h"
 TRAFFICMON_CONFIG : dict[str, str] = {
-    item.name: str(item.value) for item in TrafficmonGlobals
+    k: str(v)
+    for k, v in TrafficmonGlobals.__dict__.items()
+    if not k.startswith('_')
 }
 
 # Test if a string is a valid C identifier
-def is_valid_c_identifier(s: str) -> bool:
-    return s.isidentifier()
+assert all(
+    key.isidentifier() and '\n' not in value
+    for key, value in TRAFFICMON_CONFIG.items()
+), "Invalid Trafficmon Globals (see trafficmon/globals.py)"
 
 # Create the file contents
 file_contents: str = '\n'.join([

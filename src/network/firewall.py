@@ -2,6 +2,7 @@ from ipaddress import IPv4Address
 from typing import Optional
 from data.network import PortForward
 from data.network import IfName
+from trafficmon.globals import TrafficmonGlobals
 from util.bash import bash
 
 def forward_port(
@@ -39,6 +40,13 @@ def set_vpn_firewall(
         ip6tables -P FORWARD DROP
         ip6tables -P OUTPUT ACCEPT
 
+        # Mark OUTPUT packets from WAN as privileged
+        # Note: This must be called before DROP or ACCEPT in the chain
+        iptables -A OUTPUT -o {wan} -j MARK --set-mark {TrafficmonGlobals.PRIVILEGED_MARK}
+        ip6tables -A OUTPUT -o {wan} -j MARK --set-mark {TrafficmonGlobals.PRIVILEGED_MARK}
+        iptables -A OUTPUT -o {wan} -j CONNMARK --save-mark
+        ip6tables -A OUTPUT -o {wan} -j CONNMARK --save-mark
+
         # Allow loopback interface to function properly for IPv4 and IPv6
         iptables -A INPUT -i lo -j ACCEPT
         iptables -A OUTPUT -o lo -j ACCEPT
@@ -74,6 +82,7 @@ def set_vpn_firewall(
         iptables -A OUTPUT -o {wan} -d {peer_ip} -j ACCEPT
         iptables -A OUTPUT -o {wan} -j DROP
         ip6tables -A OUTPUT -o {wan} -j DROP
+
     ''')
 
 def set_basic_v4_firewall():

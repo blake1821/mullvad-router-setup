@@ -1,6 +1,4 @@
-from enum import Enum
-
-class TrafficmonGlobals(Enum):
+class TrafficmonGlobals:
     """
     Global constants shared between the C/C++ and Python code.
     Each name must be a valid C identifer, and each value must be str()-ingable.
